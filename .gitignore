@@ -1,0 +1,11 @@
+# Configurações específicas da máquina não devem ser enviadas ao repositório.
+backend/.env
+
+# Ambientes virtuais e arquivos temporários do Python ficam fora do projeto versionado.
+backend/venv/
+__pycache__/
+*.py[cod]
+
+# Dependências instaladas e arquivos gerados pelo frontend podem ser recriados.
+frontend/node_modules/
+frontend/dist/
