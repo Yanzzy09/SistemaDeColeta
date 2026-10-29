@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 // A URL vem do ambiente: desenvolvimento chama a API local e produção usa o proxy /api.
-const API_BASE_URL = import.meta.env.VITE_URL_DA_API || '/api';
+const URL_API_CONFIGURADA = import.meta.env.VITE_URL_DA_API;
+const API_BASE_URL = (URL_API_CONFIGURADA && URL_API_CONFIGURADA !== '/api'
+  ? URL_API_CONFIGURADA
+  : 'https://sistema-de-coleta-vert.vercel.app').replace(/\/$/, '');
 const MATERIAIS = ['Papel', 'Vidro', 'Plástico', 'Metal'];
 const PONTOS_POR_QUILO = { Papel: 1, Vidro: 1, Plástico: 2, Metal: 4 };
 
