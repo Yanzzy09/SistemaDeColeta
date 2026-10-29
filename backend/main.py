@@ -28,9 +28,10 @@ async def erro_de_banco(request: Request, exc: Exception):
     return JSONResponse(
         status_code=503,
         content={
-            "detail": "Banco de dados indisponível. Confira URL_DO_BANCO e a senha do MySQL no arquivo backend/.env."
+            "detail": "Banco de dados indisponível. Confira URL_DO_BANCO e a senha do PostgreSQL no arquivo backend/.env."
         },
     )
+
 
 # Este registro conecta os recursos de coleta e pesagem à aplicação.
 app.include_router(rotas_coletas.roteador)

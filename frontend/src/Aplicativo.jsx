@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+// A URL vem do ambiente: desenvolvimento chama a API local e produção usa o proxy /api.
+const API_BASE_URL = import.meta.env.VITE_URL_DA_API || '/api';
 const MATERIAIS = ['Papel', 'Vidro', 'Plástico', 'Metal'];
 const PONTOS_POR_QUILO = { Papel: 1, Vidro: 1, Plástico: 2, Metal: 4 };
 

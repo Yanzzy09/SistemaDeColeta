@@ -1,0 +1,30 @@
+# Orquestra banco, API e tela para execução integrada do projeto.
+services:
+  banco:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${BANCO_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - dados_do_banco:/var/lib/postgresql/data
+
+  api:
+    build: ./backend
+    environment:
+      URL_DO_BANCO: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${BANCO_DATABASE}
+      CHAVE_DO_TOKEN: ${CHAVE_DO_TOKEN}
+    depends_on:
+      - banco
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+
+volumes:
+  dados_do_banco:

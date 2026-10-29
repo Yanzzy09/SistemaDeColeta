@@ -1,5 +1,9 @@
 # Configurações específicas da máquina não devem ser enviadas ao repositório.
 backend/.env
+/.env
+frontend/.env.local
+kk_pdf/
+kk_contact.png
 
 # Ambientes virtuais e arquivos temporários do Python ficam fora do projeto versionado.
 backend/venv/

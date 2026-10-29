@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 python-dotenv
 sqlalchemy
-mysql-connector-python
+psycopg[binary]
 alembic
 pwdlib[argon2]
 PyJWT

@@ -1,0 +1,14 @@
+# O prefixo /api é removido antes de a requisição chegar à API.
+:80 {
+    root * /srv
+    encode gzip
+
+    handle_path /api/* {
+        reverse_proxy api:8000
+    }
+
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
+}

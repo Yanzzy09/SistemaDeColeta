@@ -1,11 +1,9 @@
-from contextlib import contextmanager
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 import configuracao as config
 
-# Este engine representa a conexão configurada para o MySQL sem abrir uma sessão por conta própria.
+# Este engine representa a conexão configurada para o PostgreSQL sem abrir uma sessão por conta própria.
 opcoes_engine = {"pool_pre_ping": True}
 if config.URL_DO_BANCO.startswith("sqlite"):
     opcoes_engine["connect_args"] = {"check_same_thread": False}
@@ -24,3 +22,7 @@ class Base(DeclarativeBase):
 def obter_sessao():
     with Sessao() as sessao:
         yield sessao
+
+from sqlalchemy import nullpool 
+
+engine = create_engine(config.URL_DO_BANCO, poolclass=nullpool)

@@ -13,10 +13,10 @@ ORIGENS_FRONTEND = [origem for origem in {
     "http://127.0.0.1:5173",
 } if origem]
 
-# Este endereço informa ao SQLAlchemy como encontrar o banco MySQL deste ambiente.
+# Este endereço informa ao SQLAlchemy como encontrar o banco PostgreSQL deste ambiente.
 URL_DO_BANCO = os.getenv(
     "URL_DO_BANCO",
-    "mysql+mysqlconnector://root:senha@localhost:3306/volta",
+    "postgresql+psycopg://postgres:senha@localhost:5432/Sistema_de_coleta",
 )
 
 # Esta chave assina os tokens e deve existir somente no .env de cada ambiente.

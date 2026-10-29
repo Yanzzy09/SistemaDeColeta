@@ -16,9 +16,11 @@ Abra o endereço local informado pelo Vite no terminal. Use o seletor no canto s
 
 Para gerar a versão de produção, dentro de `frontend/`, execute `npm run build`.
 
+O desenvolvimento usa `.env.development` com a API local. O build de producao usa `.env.production` e `VITE_URL_DA_API=/api`; o servidor web deve servir `frontend/dist/` e encaminhar `/api` para a API interna.
+
 ## Backend
 
-O backend usa FastAPI, SQLAlchemy e MySQL. O Alembic registra as mudanças das tabelas em `backend/migracoes/`.
+O backend usa FastAPI, SQLAlchemy e PostgreSQL. O Alembic registra as mudanças das tabelas em `backend/migracoes/`.
 
 ```powershell
 cd backend
@@ -27,7 +29,7 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-Copie `.env.exemplo` para `.env` e preencha `URL_DO_BANCO` com o endereço do seu MySQL. Depois, crie as tabelas do banco vazio:
+Copie `.env.exemplo` para `.env` e preencha `URL_DO_BANCO` com o endereço do seu PostgreSQL. Depois, crie as tabelas do banco vazio:
 
 ```powershell
 python criar_tabelas.py
@@ -65,3 +67,19 @@ Antes do primeiro login, cadastre os dois perfis pelo `POST /usuarios`: Joana co
 A API usa Argon2 para guardar apenas o hash da senha e JWT para identificar a sessão. O login recebe formulário com `username` (e-mail) e `password`, devolve um token Bearer e o frontend guarda esse token no `localStorage`.
 
 As rotas de coleta exigem autenticação. A moradora vê e agenda somente as próprias coletas; a cooperativa vê a rota e registra pesagens. Sem token, a API responde 401. Com token válido, mas perfil inadequado, responde 403. O cadastro de e-mail repetido responde 409.
+## Execução integrada com Docker Compose
+
+O arquivo `docker-compose.yml` reúne o PostgreSQL (`banco`), a API (`api`) e a tela com Caddy (`web`). Para testar essa composição, copie `.env.exemplo` para `.env`, preencha os valores localmente e não versione esse arquivo. Em seguida:
+
+```bash
+docker compose up -d --build
+docker compose exec api alembic upgrade head
+```
+
+A aplicação ficará disponível em `http://localhost:8080`. Para acompanhar a API use `docker compose logs -f api`; para desligar os serviços use `docker compose down`. O volume `dados_do_banco` preserva os dados entre reinicializações; remova-o somente se quiser apagar o banco.
+
+## Publicação separada na Vercel
+
+Frontend e backend possuem configurações independentes. No projeto Vercel do frontend, use `frontend/` como diretório raiz, mantenha o comando `npm run build` e configure a variável de ambiente `VITE_URL_DA_API` com a URL pública do projeto Vercel do backend, por exemplo `https://seu-backend.vercel.app`.
+
+No projeto Vercel do backend, use `backend/` como diretório raiz. O arquivo `backend/api/index.py` expõe o FastAPI e `backend/vercel.json` direciona as requisições para ele. Configure no painel `URL_DO_BANCO` com a conexão PostgreSQL do Supabase, `CHAVE_DO_TOKEN` e `FRONTEND_ORIGIN` com a URL do frontend. Depois do primeiro deploy, aplique as migrations a partir do backend local com `backend\\venv\\Scripts\\alembic.exe upgrade head` usando a mesma URL do Supabase.

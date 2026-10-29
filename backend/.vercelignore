@@ -1,0 +1,6 @@
+venv/
+.env
+volta.db
+__pycache__/
+*.py[cod]
+migrar_dados_sqlite_para_postgresql.py
