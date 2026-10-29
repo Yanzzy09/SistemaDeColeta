@@ -22,7 +22,8 @@ app.add_middleware(
 )
 
 
-# Esta rota pública confirma que a API está disponível no caminho raiz do backend.
+# Estas rotas públicas confirmam que a API está disponível na raiz e no endpoint de health.
+@app.get("/", include_in_schema=False)
 @app.get("/health", include_in_schema=False)
 def verificar_saude():
     return {"status": "ok"}
