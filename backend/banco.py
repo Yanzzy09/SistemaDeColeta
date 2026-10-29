@@ -23,6 +23,3 @@ def obter_sessao():
     with Sessao() as sessao:
         yield sessao
 
-from sqlalchemy import nullpool 
-
-engine = create_engine(config.URL_DO_BANCO, poolclass=nullpool)

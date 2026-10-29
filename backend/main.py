@@ -22,6 +22,12 @@ app.add_middleware(
 )
 
 
+# Esta rota pública confirma que a API está disponível no caminho raiz do backend.
+@app.get("/health", include_in_schema=False)
+def verificar_saude():
+    return {"status": "ok"}
+
+
 @app.exception_handler(SQLAlchemyError)
 async def erro_de_banco(request: Request, exc: Exception):
     """Retorna uma mensagem acionável quando o banco não aceita a conexão."""
