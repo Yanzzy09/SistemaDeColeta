@@ -77,9 +77,21 @@ function Icone({ nome, tamanho = 18 }) {
 
 // Este componente mantém a navegação entre os dois perfis simples e visível.
 function SeletorPerfil({ perfil, aoSair, modoDemo, aoAlternarDemo }) {
+  const [modoCelular, setModoCelular] = useState(() => localStorage.getItem('volta-interface') === 'celular' || (localStorage.getItem('volta-interface') === null && window.matchMedia('(max-width: 760px)').matches));
+  function alternarTela() {
+    setModoCelular((atual) => {
+      const proximo = !atual;
+      localStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
+      document.documentElement.classList.toggle('interface-celular', proximo);
+      document.documentElement.classList.toggle('interface-computador', !proximo);
+      return proximo;
+    });
+  }
+  const aoAlternarTela = alternarTela;
+  useEffect(() => { document.documentElement.classList.toggle('interface-celular', modoCelular); document.documentElement.classList.toggle('interface-computador', !modoCelular); }, [modoCelular]);
   return <div className="seletor-perfil" role="group" aria-label="Escolha o perfil">
     <span className="perfil-logado"><span className={`perfil-avatar ${perfil === 'moradora' ? 'avatar-moradora' : 'avatar-cooperativa'}`}>{perfil === 'moradora' ? 'J' : 'O'}</span><span>{perfil === 'moradora' ? 'Moradora' : 'Cooperativa'}</span></span>
-    {modoDemo && <button className="botao-alternar-demo" onClick={aoAlternarDemo}>{perfil === 'moradora' ? 'Ver Osmar' : 'Ver Joana'}</button>}<button className="botao-sair" onClick={aoSair}>Sair</button>
+    <button className="botao-alternar-tela" onClick={aoAlternarTela} aria-label="Alternar interface">{modoCelular ? 'Computador' : 'Celular'}</button>{modoDemo && <button className="botao-alternar-demo" onClick={aoAlternarDemo}>{perfil === 'moradora' ? 'Ver Osmar' : 'Ver Joana'}</button>}<button className="botao-sair" onClick={aoSair}>Sair</button>
   </div>;
 }
 
@@ -257,6 +269,7 @@ function PainelAplicativo() {
   const [modalAgendamento, setModalAgendamento] = useState(false);
   const [coletaAtiva, setColetaAtiva] = useState(null);
   const [coletaPesagem, setColetaPesagem] = useState(null);
+  const [modoCelular, setModoCelular] = useState(() => localStorage.getItem('volta-interface') === 'celular' || (localStorage.getItem('volta-interface') === null && window.matchMedia('(max-width: 760px)').matches));
   const coletasOrdenadas = useMemo(() => coletas, [coletas]);
 
   // Este efeito carrega a mesma lista usada pelo backend para sincronizar os dois perfis.
@@ -368,6 +381,15 @@ function PainelAplicativo() {
   function alternarPerfilDemo() {
     setPerfil((atual) => atual === 'moradora' ? 'cooperativa' : 'moradora');
     setUsuario((atual) => atual?.tipo === 'morador' ? { nome: 'Osmar Coordenador', tipo: 'cooperativa' } : { nome: 'Joana Martins', tipo: 'morador' });
+  }
+
+  // Esta função alterna a densidade da interface e preserva a escolha neste navegador.
+  function alternarTela() {
+    setModoCelular((atual) => {
+      const proximo = !atual;
+      localStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
+      return proximo;
+    });
   }
 
   return <div className="aplicativo"><header className="barra-superior"><div className="barra-interior"><Marca /><div className="navegacao-centro"><span className="navegacao-ponto" />{perfil === 'moradora' ? 'Seu cantinho sustentável' : 'Operação de coleta'}</div><SeletorPerfil perfil={perfil} modoDemo={token === 'demo'} aoAlternarDemo={alternarPerfilDemo} aoSair={() => { localStorage.removeItem('volta-token'); window.location.reload(); }} /></div></header>
