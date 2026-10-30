@@ -170,7 +170,7 @@ function CartaoColeta({ coleta, aoSelecionar, compacto = false }) {
   const concluida = coleta.situacao === 'Coletada';
   return <button className={`cartao-coleta ${compacto ? 'cartao-compacto' : ''}`} onClick={() => aoSelecionar(coleta)}>
     <span className={`mini-icone-coleta ${concluida ? 'mini-concluida' : ''}`}><Icone nome={concluida ? 'check' : 'caixa'} tamanho={19} /></span>
-    <span className="cartao-conteudo"><span className="cartao-linha-superior"><span className="codigo-coleta">{coleta.id}</span><span className={`selo-status ${concluida ? 'status-concluida' : 'status-agendada'}`}><i />{coleta.situacao}</span></span><strong>{compacto ? coleta.morador : formatarData(coleta.dia)}</strong><span className="cartao-detalhe">{compacto ? formatarData(coleta.dia) : coleta.endereco}</span>{!compacto && <span className="etiquetas-materiais">{coleta.materiais.map((material) => <span key={material}>{material}</span>)}</span>}{coleta.pesagens.length > 0 && <span className="linha-pontos"><Icone nome="estrela" tamanho={14} /> {coleta.pontos} pontos conquistados</span>}</span>
+    <span className="cartao-conteudo"><span className="cartao-linha-superior"><span className="codigo-coleta">{coleta.id}</span><span className={`selo-status ${concluida ? 'status-concluida' : 'status-agendada'}`}><i />{coleta.situacao}</span></span><strong>{compacto ? coleta.morador : formatarData(coleta.dia)}</strong><span className="cartao-detalhe">{compacto ? formatarData(coleta.dia) : coleta.endereco}</span><span className="etiquetas-materiais">{coleta.materiais.map((material) => <span key={material}>{material}</span>)}</span>{coleta.pesagens.length > 0 && <span className="linha-pontos"><Icone nome="estrela" tamanho={14} /> {coleta.pontos} pontos conquistados</span>}</span>
     <Icone nome="chevron" tamanho={18} />
   </button>;
 }
@@ -333,25 +333,30 @@ function PainelAplicativo() {
   }
 
   // Esta função registra uma pesagem, atualiza os pontos e conclui a coleta.
-  async function salvarPesagem(pesagem) {
+  async function salvarPesagem(pesagens) {
     if (token === 'demo') {
       setColetas((atuais) => atuais.map((coleta) => coleta.id === coletaPesagem.id
-        ? { ...coleta, situacao: 'Coletada', pontos: coleta.pontos + pesagem.pontos, pesagens: [...(coleta.pesagens || []), pesagem] }
+        ? { ...coleta, situacao: 'Coletada', pontos: coleta.pontos + pesagens.reduce((total, pesagem) => total + pesagem.pontos, 0), pesagens: [...(coleta.pesagens || []), ...pesagens] }
         : coleta));
       setErroApi('');
       setColetaPesagem(null);
       return;
     }
     try {
-      const resposta = await fetch(`${API_BASE_URL}/coletas/${coletaPesagem.id}/pesagens`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ material: pesagem.material, quilos: pesagem.quilos }),
-      });
+      const pesagensCriadas = [];
+      for (const pesagem of pesagens) {
+        const resposta = await fetch(`${API_BASE_URL}/coletas/${coletaPesagem.id}/pesagens`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ material: pesagem.material, quilos: pesagem.quilos }),
+        });
+        if (!resposta.ok) throw new Error('Falha ao registrar a pesagem.');
+        pesagensCriadas.push(await resposta.json());
+      }
+      const resposta = { ok: true };
       if (!resposta.ok) throw new Error('Não foi possível registrar a pesagem.');
-      const pesagemCriada = await resposta.json();
       setColetas((atuais) => atuais.map((coleta) => coleta.id === coletaPesagem.id
-        ? { ...coleta, situacao: 'Coletada', pontos: coleta.pontos + pesagemCriada.pontos, pesagens: [...(coleta.pesagens || []), pesagemCriada] }
+        ? { ...coleta, situacao: 'Coletada', pontos: coleta.pontos + pesagensCriadas.reduce((total, pesagem) => total + pesagem.pontos, 0), pesagens: [...(coleta.pesagens || []), ...pesagensCriadas] }
         : coleta));
       setErroApi('');
       setColetaPesagem(null);
@@ -371,7 +376,7 @@ function PainelAplicativo() {
     <footer className="rodape"><Marca /><span>Pequenas atitudes, um futuro que volta.</span><span className="rodape-direitos">Feito com cuidado <span>✳</span></span></footer>
     {modalAgendamento && <FormularioAgendamento aoSalvar={salvarAgendamento} aoCancelar={() => setModalAgendamento(false)} />}
     {coletaAtiva && <DetalheColeta coleta={coletaAtiva} aoFechar={() => setColetaAtiva(null)} />}
-    {coletaPesagem && <FormularioPesagem coleta={coletaPesagem} aoSalvar={salvarPesagem} aoCancelar={() => setColetaPesagem(null)} />}
+    {coletaPesagem && <FormularioPesagemMateriais coleta={coletaPesagem} aoSalvar={salvarPesagem} aoCancelar={() => setColetaPesagem(null)} />}
   </div>;
 }
 
@@ -380,4 +385,29 @@ export default function Aplicativo() {
   const [token, setToken] = useState(() => localStorage.getItem('volta-token'));
   if (!token) return <TelaLogin aoEntrar={setToken} />;
   return <PainelAplicativo key={token} />;
+}
+// Esta tela registra, na mesma operação, o peso individual de cada material solicitado.
+function FormularioPesagemMateriais({ coleta, aoSalvar, aoCancelar }) {
+  const materiais = coleta.materiais || [];
+  const [pesos, setPesos] = useState(() => Object.fromEntries(materiais.map((material) => [material, ''])));
+  const [erro, setErro] = useState('');
+  const pontos = materiais.reduce((total, material) => total + Number(pesos[material] || 0) * PONTOS_POR_QUILO[material], 0);
+
+  function registrar(evento) {
+    evento.preventDefault();
+    if (materiais.some((material) => !Number(pesos[material]) || Number(pesos[material]) <= 0)) {
+      setErro('Informe um peso maior que zero para cada material solicitado.');
+      return;
+    }
+    aoSalvar(materiais.map((material) => ({ material, quilos: Number(pesos[material]), pontos: Number(pesos[material]) * PONTOS_POR_QUILO[material] })));
+  }
+
+  return <div className="modal-fundo" role="presentation" onMouseDown={(evento) => evento.target === evento.currentTarget && aoCancelar()}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-pesagem-individual">
+    <div className="modal-cabecalho"><div className="modal-icone modal-icone-verde"><Icone nome="peso" tamanho={22} /></div><button className="fechar-modal" onClick={aoCancelar} aria-label="Fechar">×</button></div>
+    <p className="sobretitulo">REGISTRO DE PESAGEM · {coleta.id}</p><h2 id="titulo-pesagem-individual">Peso de cada material</h2><p className="texto-modal">{coleta.morador} · {coleta.endereco}</p>
+    <form onSubmit={registrar}><p className="texto-materiais-pesagem">Materiais solicitados nesta coleta:</p><div className="lista-pesos-materiais">{materiais.map((material) => <label className="linha-peso-material" key={material}><span><strong>{material}</strong><small>{PONTOS_POR_QUILO[material]} {PONTOS_POR_QUILO[material] === 1 ? 'ponto' : 'pontos'} por kg</small></span><span className="campo-quilos"><input type="number" min="0.1" step="0.1" placeholder="0,0" value={pesos[material]} onChange={(evento) => { setPesos((atuais) => ({ ...atuais, [material]: evento.target.value })); setErro(''); }} /><b>kg</b></span></label>)}</div>
+      <div className="previa-pontos"><span><Icone nome="estrela" tamanho={17} /> Pontos previstos</span><strong>{pontos} <small>pts</small></strong></div>
+      {erro && <p className="mensagem-erro" role="alert">{erro}</p>}<div className="acoes-modal"><button type="button" className="botao-secundario" onClick={aoCancelar}>Cancelar</button><button type="submit" className="botao-principal">Salvar pesagens <Icone nome="check" tamanho={17} /></button></div>
+    </form>
+  </section></div>;
 }
