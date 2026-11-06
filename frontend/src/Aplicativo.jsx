@@ -6,9 +6,13 @@ const API_BASE_URL = (URL_API_CONFIGURADA && URL_API_CONFIGURADA !== '/api'
   ? URL_API_CONFIGURADA
   : 'https://sistema-de-coleta-vert.vercel.app').replace(/\/$/, '');
 const MATERIAIS = ['Papel', 'Vidro', 'Plástico', 'Metal'];
-const PONTOS_POR_QUILO = { Papel: 1, Vidro: 1, Plástico: 2, Metal: 4 };
+const PONTOS_POR_QUILO = { Papel: 0.5, Vidro: 0.5, Plástico: 0.5, Metal: 0.5 };
 
 // Estes dados iniciais mostram os estados principais do fluxo na primeira visita.
+// A regra atual soma um ponto a cada dois quilos completos, para qualquer material.
+const QUILOS_POR_PONTO = 2;
+const calcularPontos = (quilos) => Math.floor(Number(quilos || 0) / QUILOS_POR_PONTO);
+
 const COLETAS_INICIAIS = [
   {
     id: 'VC-1042', morador: 'Joana Martins', endereco: 'Rua das Palmeiras, 128 · Vila Mariana',
@@ -16,7 +20,7 @@ const COLETAS_INICIAIS = [
   },
   {
     id: 'VC-1041', morador: 'Joana Martins', endereco: 'Rua das Palmeiras, 128 · Vila Mariana',
-    dia: dataRelativa(-3), materiais: ['Papel', 'Metal'], situacao: 'Coletada', pontos: 26,
+    dia: dataRelativa(-3), materiais: ['Papel', 'Metal'], situacao: 'Coletada', pontos: 7,
     pesagens: [{ material: 'Papel', quilos: 10 }, { material: 'Metal', quilos: 4 }],
   },
   {
@@ -215,7 +219,7 @@ function FormularioPesagem({ coleta, aoSalvar, aoCancelar }) {
   const [material, setMaterial] = useState(MATERIAIS[0]);
   const [quilos, setQuilos] = useState('');
   const [erro, setErro] = useState('');
-  const pontos = Number(quilos || 0) * PONTOS_POR_QUILO[material];
+  const pontos = calcularPontos(quilos);
 
   // Esta função valida o peso e passa ao aplicativo a pesagem pronta para registrar.
   function registrar(evento) {
@@ -254,7 +258,7 @@ function TelaCooperativa({ coletas, aoPesagem }) {
     <section className="secao-rota"><div className="cabecalho-secao cabecalho-rota"><div><span className="sobretitulo">ORGANIZAÇÃO DO CAMINHÃO</span><h2>Coletas da rota</h2></div><label className="seletor-data"><Icone nome="calendario" tamanho={17} /><input type="date" aria-label="Filtrar coletas por dia" value={dia} onChange={(evento) => setDia(evento.target.value)} /></label></div>
       <div className="filtros-rota"><label className="campo-busca"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Buscar morador ou endereço" /></label><span className="contador-rota">{doDia.length} {doDia.length === 1 ? 'parada' : 'paradas'}</span></div>
       {doDia.length ? <div className="lista-rota">{doDia.map((coleta, indice) => <div className="parada-rota" key={coleta.id}><div className="ordem-parada"><span>{String(indice + 1).padStart(2, '0')}</span><i /></div><CartaoColeta coleta={coleta} compacto aoSelecionar={() => {}} /><div className="acao-parada">{coleta.situacao === 'Agendada' ? <button className="botao-pesagem" onClick={() => aoPesagem(coleta)}><Icone nome="peso" tamanho={16} /> Registrar peso</button> : <div className="acoes-coleta-feita"><span className="peso-concluido"><Icone nome="check" tamanho={16} /> {coleta.pontos} pts</span><button className="botao-pesagem botao-pesagem-secundario" onClick={() => aoPesagem(coleta)}><Icone nome="mais" tamanho={14} /> Adicionar material</button></div>}</div></div>)}</div> : <div className="estado-vazio"><span className="vazio-icone"><Icone nome="calendario" tamanho={23} /></span><strong>Nenhuma coleta para este dia</strong><p>Escolha outra data ou ajuste sua busca.</p></div>}
-    </section><p className="nota-pontos"><Icone nome="estrela" tamanho={15} /> Pontuação automática: papel e vidro 1 pt/kg · plástico 2 pts/kg · metal 4 pts/kg</p>
+    </section><p className="nota-pontos"><Icone nome="estrela" tamanho={15} /> Pontuação automática: 1 ponto a cada 2 kg completos, para qualquer material.</p>
   </main>;
 }
 
@@ -413,7 +417,7 @@ function FormularioPesagemMateriais({ coleta, aoSalvar, aoCancelar }) {
   const materiais = coleta.materiais || [];
   const [pesos, setPesos] = useState(() => Object.fromEntries(materiais.map((material) => [material, ''])));
   const [erro, setErro] = useState('');
-  const pontos = materiais.reduce((total, material) => total + Number(pesos[material] || 0) * PONTOS_POR_QUILO[material], 0);
+  const pontos = materiais.reduce((total, material) => total + calcularPontos(pesos[material]), 0);
 
   function registrar(evento) {
     evento.preventDefault();
@@ -421,13 +425,13 @@ function FormularioPesagemMateriais({ coleta, aoSalvar, aoCancelar }) {
       setErro('Informe um peso maior que zero para cada material solicitado.');
       return;
     }
-    aoSalvar(materiais.map((material) => ({ material, quilos: Number(pesos[material]), pontos: Number(pesos[material]) * PONTOS_POR_QUILO[material] })));
+    aoSalvar(materiais.map((material) => ({ material, quilos: Number(pesos[material]), pontos: calcularPontos(pesos[material]) })));
   }
 
   return <div className="modal-fundo" role="presentation" onMouseDown={(evento) => evento.target === evento.currentTarget && aoCancelar()}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-pesagem-individual">
     <div className="modal-cabecalho"><div className="modal-icone modal-icone-verde"><Icone nome="peso" tamanho={22} /></div><button className="fechar-modal" onClick={aoCancelar} aria-label="Fechar">×</button></div>
     <p className="sobretitulo">REGISTRO DE PESAGEM · {coleta.id}</p><h2 id="titulo-pesagem-individual">Peso de cada material</h2><p className="texto-modal">{coleta.morador} · {coleta.endereco}</p>
-    <form onSubmit={registrar}><p className="texto-materiais-pesagem">Materiais solicitados nesta coleta:</p><div className="lista-pesos-materiais">{materiais.map((material) => <label className="linha-peso-material" key={material}><span><strong>{material}</strong><small>{PONTOS_POR_QUILO[material]} {PONTOS_POR_QUILO[material] === 1 ? 'ponto' : 'pontos'} por kg</small></span><span className="campo-quilos"><input type="number" min="0.1" step="0.1" placeholder="0,0" value={pesos[material]} onChange={(evento) => { setPesos((atuais) => ({ ...atuais, [material]: evento.target.value })); setErro(''); }} /><b>kg</b></span></label>)}</div>
+    <form onSubmit={registrar}><p className="texto-materiais-pesagem">Materiais solicitados nesta coleta:</p><div className="lista-pesos-materiais">{materiais.map((material) => <label className="linha-peso-material" key={material}><span><strong>{material}</strong><small>1 ponto a cada 2 kg</small></span><span className="campo-quilos"><input type="number" min="0.1" step="0.1" placeholder="0,0" value={pesos[material]} onChange={(evento) => { setPesos((atuais) => ({ ...atuais, [material]: evento.target.value })); setErro(''); }} /><b>kg</b></span></label>)}</div>
       <div className="previa-pontos"><span><Icone nome="estrela" tamanho={17} /> Pontos previstos</span><strong>{pontos} <small>pts</small></strong></div>
       {erro && <p className="mensagem-erro" role="alert">{erro}</p>}<div className="acoes-modal"><button type="button" className="botao-secundario" onClick={aoCancelar}>Cancelar</button><button type="submit" className="botao-principal">Salvar pesagens <Icone nome="check" tamanho={17} /></button></div>
     </form>

@@ -1,13 +1,8 @@
 import repositorios.coleta as repositorio_coleta
 import repositorios.pesagem as repositorio_pesagem
 
-# Esta tabela traduz cada material na quantidade de pontos por quilo definida pela cartilha.
-PONTOS_POR_QUILO = {
-    "Papel": 1,
-    "Vidro": 1,
-    "Plástico": 2,
-    "Metal": 4,
-}
+# A regra atual é igual para todos os materiais: um ponto a cada dois quilos completos.
+QUILOS_POR_PONTO = 2
 
 
 # Este serviço devolve as pesagens da coleta ou None quando a coleta não existe.
@@ -24,7 +19,7 @@ def registrar_pesagem(sessao, coleta_id, dados):
     if coleta is None:
         return None
 
-    pontos = int(dados["quilos"] * PONTOS_POR_QUILO[dados["material"]])
+    pontos = int(dados["quilos"] // QUILOS_POR_PONTO)
     dados_pesagem = {
         **dados,
         "coleta_id": coleta_id,
