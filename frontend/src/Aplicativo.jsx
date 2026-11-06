@@ -138,6 +138,7 @@ function FormularioAgendamento({ aoSalvar, aoCancelar }) {
   const [endereco, setEndereco] = useState('');
   const [dia, setDia] = useState(dataRelativa(1));
   const [materiais, setMateriais] = useState([]);
+  const [descricao, setDescricao] = useState('');
   const [erro, setErro] = useState('');
 
   // Esta função verifica os campos essenciais antes de incluir a coleta na lista.
@@ -149,7 +150,7 @@ function FormularioAgendamento({ aoSalvar, aoCancelar }) {
     }
     aoSalvar({
       id: `VC-${Math.floor(1000 + Math.random() * 8999)}`,
-      morador: 'Joana Martins', endereco: endereco.trim(), dia, materiais,
+      morador: 'Joana Martins', endereco: endereco.trim(), dia, materiais, descricao: descricao.trim(),
       situacao: 'Agendada', pontos: 0, pesagens: [],
     });
   }
@@ -172,6 +173,8 @@ function FormularioAgendamento({ aoSalvar, aoCancelar }) {
         <div className="campo-com-icone"><Icone nome="local" tamanho={18} /><input id="endereco" value={endereco} onChange={(evento) => { setEndereco(evento.target.value); setErro(''); }} placeholder="Rua, número e bairro" autoFocus /></div>
         <label className="campo-label" htmlFor="dia">Qual dia fica melhor?</label>
         <input className="campo-data" id="dia" type="date" min={dataRelativa(0)} value={dia} onChange={(evento) => setDia(evento.target.value)} />
+        <label className="campo-label" htmlFor="descricao-coleta">O que está no pedido?</label>
+        <textarea className="campo-descricao" id="descricao-coleta" maxLength="500" value={descricao} onChange={(evento) => setDescricao(evento.target.value)} placeholder="Ex.: 2 caixas de papelão e garrafas plásticas" />
         <span className="campo-label">O que você separou?</span>
         <div className="opcoes-materiais">{MATERIAIS.map((material, indice) => <button key={material} type="button" className={`opcao-material ${materiais.includes(material) ? 'opcao-selecionada' : ''}`} onClick={() => alternarMaterial(material)}><span className={`bolinha-material material-${indice}`}><Icone nome="caixa" tamanho={17} /></span><span>{material}</span><span className="marca-selecao">{materiais.includes(material) ? '✓' : '+'}</span></button>)}</div>
         {erro && <p className="mensagem-erro" role="alert">{erro}</p>}
@@ -186,7 +189,7 @@ function CartaoColeta({ coleta, aoSelecionar, compacto = false }) {
   const concluida = coleta.situacao === 'Coletada';
   return <button className={`cartao-coleta ${compacto ? 'cartao-compacto' : ''}`} onClick={() => aoSelecionar(coleta)}>
     <span className={`mini-icone-coleta ${concluida ? 'mini-concluida' : ''}`}><Icone nome={concluida ? 'check' : 'caixa'} tamanho={19} /></span>
-    <span className="cartao-conteudo"><span className="cartao-linha-superior"><span className="codigo-coleta">{coleta.id}</span><span className={`selo-status ${concluida ? 'status-concluida' : 'status-agendada'}`}><i />{coleta.situacao}</span></span><strong>{compacto ? coleta.morador : formatarData(coleta.dia)}</strong><span className="cartao-detalhe">{compacto ? formatarData(coleta.dia) : coleta.endereco}</span><span className="etiquetas-materiais">{coleta.materiais.map((material) => <span key={material}>{material}</span>)}</span>{coleta.pesagens.length > 0 && <span className="linha-pontos"><Icone nome="estrela" tamanho={14} /> {coleta.pontos} pontos conquistados</span>}</span>
+    <span className="cartao-conteudo"><span className="cartao-linha-superior"><span className="codigo-coleta">{coleta.id}</span><span className={`selo-status ${concluida ? 'status-concluida' : 'status-agendada'}`}><i />{coleta.situacao}</span></span><strong>{compacto ? coleta.morador : formatarData(coleta.dia)}</strong><span className="cartao-detalhe">{compacto ? formatarData(coleta.dia) : coleta.endereco}</span>{coleta.descricao && <span className="cartao-descricao">{coleta.descricao}</span>}<span className="etiquetas-materiais">{coleta.materiais.map((material) => <span key={material}>{material}</span>)}</span>{coleta.pesagens.length > 0 && <span className="linha-pontos"><Icone nome="estrela" tamanho={14} /> {coleta.pontos} pontos conquistados</span>}</span>
     <Icone nome="chevron" tamanho={18} />
   </button>;
 }
@@ -195,7 +198,7 @@ function CartaoColeta({ coleta, aoSelecionar, compacto = false }) {
 function DetalheColeta({ coleta, aoFechar }) {
   return <div className="modal-fundo" role="presentation" onMouseDown={(evento) => evento.target === evento.currentTarget && aoFechar()}><section className="modal modal-detalhe" role="dialog" aria-modal="true" aria-labelledby="titulo-detalhe">
     <div className="modal-cabecalho"><span className={`mini-icone-coleta detalhe-icone ${coleta.situacao === 'Coletada' ? 'mini-concluida' : ''}`}><Icone nome={coleta.situacao === 'Coletada' ? 'check' : 'caixa'} tamanho={20} /></span><button className="fechar-modal" onClick={aoFechar} aria-label="Fechar">×</button></div>
-    <p className="sobretitulo">COLETA {coleta.id}</p><h2 id="titulo-detalhe">{formatarData(coleta.dia)}</h2><p className="texto-modal">{coleta.endereco}</p>
+    <p className="sobretitulo">COLETA {coleta.id}</p><h2 id="titulo-detalhe">{formatarData(coleta.dia)}</h2><p className="texto-modal">{coleta.endereco}</p>{coleta.descricao && <p className="descricao-coleta"><strong>Objetos do pedido:</strong> {coleta.descricao}</p>}
     <div className="detalhe-status"><span className={`selo-status ${coleta.situacao === 'Coletada' ? 'status-concluida' : 'status-agendada'}`}><i />{coleta.situacao}</span><span>{coleta.materiais.join(' · ')}</span></div>
     <div className="secao-pesagem"><div className="secao-titulo"><h3>O que foi pesado</h3><span>{coleta.pesagens.length} {coleta.pesagens.length === 1 ? 'material' : 'materiais'}</span></div>{coleta.pesagens.length ? <>{coleta.pesagens.map((pesagem, indice) => <div className="linha-pesagem" key={`${pesagem.material}-${indice}`}><span><span className="bolinha-peso"><Icone nome="peso" tamanho={15} /></span><strong>{pesagem.material}</strong></span><span>{pesagem.quilos} kg <b>·</b> {pesagem.pontos} pts</span></div>)}<div className="total-pontos"><span><Icone nome="estrela" tamanho={18} /> Total da entrega</span><strong>{coleta.pontos} <small>pontos</small></strong></div></> : <div className="sem-pesagens"><span className="sem-peso-icone"><Icone nome="relogio" tamanho={19} /></span><div><strong>Ainda não foi pesada</strong><p>Os pontos aparecem aqui depois da coleta.</p></div></div>}</div>
     <button className="botao-secundario botao-largo" onClick={aoFechar}>Fechar</button>
@@ -337,6 +340,7 @@ function PainelAplicativo() {
           endereco: novaColeta.endereco,
           dia: novaColeta.dia,
           materiais: novaColeta.materiais,
+          descricao: novaColeta.descricao || '',
         }),
       });
       if (!resposta.ok) throw new Error('Não foi possível agendar a coleta.');

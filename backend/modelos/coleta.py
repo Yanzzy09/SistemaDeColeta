@@ -18,6 +18,7 @@ class Coleta(Base):
     endereco = Column(String(200), nullable=False)
     dia = Column(Date, nullable=False)
     materiais = Column(String(200), nullable=False)
+    descricao = Column(String(500), nullable=False, default="")
     situacao = Column(String(20), nullable=False)
     pontos = Column(Integer, nullable=False, default=0)
 

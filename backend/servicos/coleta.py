@@ -15,6 +15,7 @@ def _com_pesagens(sessao, coleta):
         "endereco": coleta.endereco,
         "dia": coleta.dia,
         "materiais": [material for material in coleta.materiais.split(",") if material],
+        "descricao": coleta.descricao,
         "situacao": coleta.situacao,
         "pontos": coleta.pontos,
         "pesagens": [
@@ -50,6 +51,7 @@ def agendar_coleta(sessao, dados, morador_id):
         "endereco": dados["endereco"],
         "dia": dados["dia"],
         "materiais": ",".join(dados["materiais"]),
+        "descricao": dados.get("descricao", "").strip(),
         "situacao": "Agendada",
         "pontos": 0,
     }
