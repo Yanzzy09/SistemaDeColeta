@@ -9,6 +9,8 @@
   </head>
   <body>
     <div id="raiz"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <link rel="stylesheet" href="/app.css" />
+    <!-- O bundle pronto evita que o Vite precise iniciar o esbuild no Windows. -->
+    <script type="module" src="/app.js"></script>
   </body>
 </html>

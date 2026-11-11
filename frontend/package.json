@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node_modules\\@esbuild\\win32-x64\\esbuild.exe src\\main.jsx --bundle --format=esm --outfile=public\\app.js --loader:.jsx=jsx --loader:.js=js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

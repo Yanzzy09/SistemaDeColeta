@@ -48,6 +48,8 @@ def buscar_usuario(usuario_id: int, sessao=Depends(obter_sessao)):
     responses={409: {"description": "O e-mail já está cadastrado."}},
 )
 def criar_usuario(dados: UsuarioEntrada, sessao=Depends(obter_sessao)):
+    if dados.tipo != "morador":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="O cadastro público é exclusivo para clientes moradores.")
     """Cria um usuário com nome e perfil morador ou cooperativa."""
     try:
         return servico_usuario.criar_usuario(sessao, dados.model_dump())

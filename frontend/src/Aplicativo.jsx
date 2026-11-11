@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
 // A URL vem do ambiente: desenvolvimento chama a API local e produção usa o proxy /api.
-const URL_API_CONFIGURADA = import.meta.env.VITE_URL_DA_API;
+// O bundle também pode ser servido como arquivo estático; nesse caso
+// import.meta.env não é injetado pelo Vite e precisa ser lido com segurança.
+const URL_API_CONFIGURADA = import.meta.env && import.meta.env.VITE_URL_DA_API;
+const API_PADRAO = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
+  : 'https://sistema-de-coleta-vert.vercel.app';
 const API_BASE_URL = (URL_API_CONFIGURADA && URL_API_CONFIGURADA !== '/api'
   ? URL_API_CONFIGURADA
-  : 'https://sistema-de-coleta-vert.vercel.app').replace(/\/$/, '');
+  : API_PADRAO).replace(/\/$/, '');
 const MATERIAIS = ['Papel', 'Vidro', 'Plástico', 'Metal'];
 const PONTOS_POR_QUILO = { Papel: 0.5, Vidro: 0.5, Plástico: 0.5, Metal: 0.5 };
 
@@ -100,7 +105,7 @@ function SeletorPerfil({ perfil, aoSair, modoDemo, aoAlternarDemo }) {
 }
 
 // Esta tela autentica a pessoa antes de liberar as telas e as requisições protegidas.
-function TelaLogin({ aoEntrar }) {
+function TelaLogin({ aoEntrar, aoCadastrar }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mensagem, setMensagem] = useState('');
@@ -114,7 +119,11 @@ function TelaLogin({ aoEntrar }) {
     const corpo = new URLSearchParams({ username: email, password: senha });
     fetch(`${API_BASE_URL}/login`, { method: 'POST', body: corpo })
       .then((resposta) => {
-        if (!resposta.ok) throw new Error('E-mail ou senha incorretos.');
+        if (!resposta.ok) {
+          if (resposta.status === 503) throw new Error('Servidor sem conexão com o banco de dados.');
+          if (resposta.status === 401) throw new Error('E-mail ou senha incorretos.');
+          throw new Error(`Não foi possível entrar (erro ${resposta.status}).`);
+        }
         return resposta.json();
       })
       .then((dados) => {
@@ -126,8 +135,7 @@ function TelaLogin({ aoEntrar }) {
   }
 
   function abrirDemonstracao() {
-    localStorage.setItem('volta-token', 'demo');
-    aoEntrar('demo');
+    aoCadastrar();
   }
 
   return <main className="tela-login"><section className="cartao-login"><Marca /><span className="sobretitulo">ACESSO AO VOLTA</span><h1>Seu cuidado<br /><em>continua daqui.</em></h1><p>Entre para agendar coletas, acompanhar pontos e cuidar da rota.</p><form onSubmit={entrar}><label className="campo-label" htmlFor="login-email">E-mail</label><input className="campo-login" id="login-email" type="email" required value={email} onChange={(evento) => setEmail(evento.target.value)} placeholder="voce@exemplo.com" /><label className="campo-label" htmlFor="login-senha">Senha</label><input className="campo-login" id="login-senha" type="password" required value={senha} onChange={(evento) => setSenha(evento.target.value)} placeholder="Sua senha" />{mensagem && <p className="mensagem-erro" role="alert">{mensagem}</p>}<button className="botao-principal botao-login" disabled={enviando}>{enviando ? 'Entrando...' : 'Entrar'} <Icone nome="seta" tamanho={17} /></button></form><div className="divisor-login"><span>ou</span></div><button type="button" className="botao-secundario botao-demo" onClick={abrirDemonstracao}>Ver demonstração</button><p className="legenda-demo">A demonstração usa dados fictícios e não precisa do banco.</p></section></main>;
@@ -413,7 +421,8 @@ function PainelAplicativo() {
 // Este componente decide se a pessoa vê a tela de login ou o painel do perfil autenticado.
 export default function Aplicativo() {
   const [token, setToken] = useState(() => localStorage.getItem('volta-token'));
-  if (!token) return <TelaLogin aoEntrar={setToken} />;
+  const [cadastro, setCadastro] = useState(false);
+  if (!token) return cadastro ? <TelaCadastro aoVoltar={() => setCadastro(false)} /> : <TelaLogin aoEntrar={setToken} aoCadastrar={() => setCadastro(true)} />;
   return <PainelAplicativo key={token} />;
 }
 // Esta tela registra, na mesma operação, o peso individual de cada material solicitado.
@@ -440,4 +449,31 @@ function FormularioPesagemMateriais({ coleta, aoSalvar, aoCancelar }) {
       {erro && <p className="mensagem-erro" role="alert">{erro}</p>}<div className="acoes-modal"><button type="button" className="botao-secundario" onClick={aoCancelar}>Cancelar</button><button type="submit" className="botao-principal">Salvar pesagens <Icone nome="check" tamanho={17} /></button></div>
     </form>
   </section></div>;
+}
+// Esta tela permite que apenas clientes criem uma conta de morador.
+function TelaCadastro({ aoVoltar }) {
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [mensagem, setMensagem] = useState('');
+  const [enviando, setEnviando] = useState(false);
+
+  async function cadastrar(evento) {
+    evento.preventDefault();
+    setEnviando(true);
+    setMensagem('');
+    try {
+      const resposta = await fetch(`${API_BASE_URL}/usuarios`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha, tipo: 'morador' }) });
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.detail || 'Não foi possível criar a conta.');
+      setMensagem('Conta criada com sucesso. Agora entre com seu e-mail e senha.');
+      setTimeout(aoVoltar, 1200);
+    } catch (erro) {
+      setMensagem(erro.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return <main className="tela-login"><section className="cartao-login"><Marca /><span className="sobretitulo">NOVO CLIENTE</span><h1>Crie sua<br /><em>conta.</em></h1><p>Cadastre-se para agendar coletas e acompanhar seus pontos.</p><form onSubmit={cadastrar}><label className="campo-label" htmlFor="cadastro-nome">Nome</label><input className="campo-login" id="cadastro-nome" required minLength="2" value={nome} onChange={(evento) => setNome(evento.target.value)} placeholder="Seu nome" /><label className="campo-label" htmlFor="cadastro-email">E-mail</label><input className="campo-login" id="cadastro-email" type="email" required value={email} onChange={(evento) => setEmail(evento.target.value)} placeholder="voce@exemplo.com" /><label className="campo-label" htmlFor="cadastro-senha">Senha</label><input className="campo-login" id="cadastro-senha" type="password" minLength="8" required value={senha} onChange={(evento) => setSenha(evento.target.value)} placeholder="Mínimo de 8 caracteres" />{mensagem && <p className="mensagem-erro" role="status">{mensagem}</p>}<button className="botao-principal botao-login" disabled={enviando}>{enviando ? 'Criando...' : 'Criar conta'} <Icone nome="seta" tamanho={17} /></button></form><button type="button" className="botao-secundario botao-demo" onClick={aoVoltar}>Voltar para entrar</button></section></main>;
 }

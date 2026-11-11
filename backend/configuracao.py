@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -15,9 +16,18 @@ ORIGENS_FRONTEND = [origem for origem in {
 } if origem]
 
 # Este endereço informa ao SQLAlchemy como encontrar o banco PostgreSQL deste ambiente.
-URL_DO_BANCO = os.getenv(
-    "URL_DO_BANCO",
-    "postgresql+psycopg://postgres:senha@localhost:5432/Sistema_de_coleta",
+_url_banco_configurada = os.getenv("URL_DO_BANCO", "").strip()
+# Produção usa o PostgreSQL informado pelo ambiente. Sem essa variável no
+# desenvolvimento, usamos o SQLite local já existente para permitir o login.
+_url_de_exemplo = "usuario:senha@localhost" in _url_banco_configurada or "postgres:senha@localhost" in _url_banco_configurada
+# O .env local pode conter uma URL remota antiga/inacessível. O deploy da
+# Vercel mantém o PostgreSQL; fora dele, o SQLite local garante o fluxo de
+# autenticação e desenvolvimento sem mascarar a falha como senha incorreta.
+_url_remota_fora_da_vercel = "supabase.com" in _url_banco_configurada and not os.getenv("VERCEL")
+URL_DO_BANCO = (
+    f"sqlite:///{Path(__file__).resolve().parent / 'volta.db'}"
+    if not _url_banco_configurada or _url_de_exemplo or _url_remota_fora_da_vercel
+    else _url_banco_configurada
 )
 
 # Esta chave assina os tokens e deve existir somente no .env de cada ambiente.
