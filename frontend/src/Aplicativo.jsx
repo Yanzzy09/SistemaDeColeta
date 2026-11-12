@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 // O bundle também pode ser servido como arquivo estático; nesse caso
 // import.meta.env não é injetado pelo Vite e precisa ser lido com segurança.
 const URL_API_CONFIGURADA = import.meta.env && import.meta.env.VITE_URL_DA_API;
-const nomeHost = window.location.hostname;
+const nomeHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 const hostLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(nomeHost);
 const hostRedeLocal = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|0\.0\.0\.0$)/.test(nomeHost);
 const API_PADRAO = hostLocal
@@ -92,10 +92,10 @@ function Icone({ nome, tamanho = 18 }) {
 // Este componente mantém a navegação entre os dois perfis simples e visível.
 function SeletorPerfil({ perfil, aoSair, modoDemo, aoAlternarDemo }) {
   const [modoCelular, setModoCelular] = useState(() => {
-    const salvo = localStorage.getItem('volta-interface');
-    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    const salvo = safeStorage.getItem('volta-interface');
+    const mobile = getIsMobileViewport();
     if (mobile) {
-      localStorage.setItem('volta-interface', 'celular');
+      safeStorage.setItem('volta-interface', 'celular');
       return true;
     }
     return salvo === 'celular';
@@ -103,19 +103,18 @@ function SeletorPerfil({ perfil, aoSair, modoDemo, aoAlternarDemo }) {
   function alternarTela() {
     setModoCelular((atual) => {
       const proximo = !atual;
-      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      const mobile = getIsMobileViewport();
       if (mobile) {
-        localStorage.setItem('volta-interface', 'celular');
+        safeStorage.setItem('volta-interface', 'celular');
         return true;
       }
-      localStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
-      document.documentElement.classList.toggle('interface-celular', proximo);
-      document.documentElement.classList.toggle('interface-computador', !proximo);
+      safeStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
+      setInterfaceClass(proximo);
       return proximo;
     });
   }
   const aoAlternarTela = alternarTela;
-  useEffect(() => { document.documentElement.classList.toggle('interface-celular', modoCelular); document.documentElement.classList.toggle('interface-computador', !modoCelular); }, [modoCelular]);
+  useEffect(() => { setInterfaceClass(modoCelular); }, [modoCelular]);
   return <div className="seletor-perfil" role="group" aria-label="Escolha o perfil">
     <span className="perfil-logado"><span className={`perfil-avatar ${perfil === 'moradora' ? 'avatar-moradora' : 'avatar-cooperativa'}`}>{perfil === 'moradora' ? 'J' : 'O'}</span><span>{perfil === 'moradora' ? 'Moradora' : 'Cooperativa'}</span></span>
     <button className="botao-alternar-tela" onClick={aoAlternarTela} aria-label="Alternar interface">{modoCelular ? 'Computador' : 'Celular'}</button>{modoDemo && <button className="botao-alternar-demo" onClick={aoAlternarDemo}>{perfil === 'moradora' ? 'Ver Osmar' : 'Ver Joana'}</button>}<button className="botao-sair" onClick={aoSair}>Sair</button>
@@ -145,7 +144,7 @@ function TelaLogin({ aoEntrar, aoCadastrar }) {
         return resposta.json();
       })
       .then((dados) => {
-        localStorage.setItem('volta-token', dados.access_token);
+        safeStorage.setItem('volta-token', dados.access_token);
         aoEntrar(dados.access_token);
       })
       .catch((erro) => setMensagem(erro.message))
@@ -294,7 +293,7 @@ function TelaCooperativa({ coletas, aoPesagem }) {
 
 // Este componente reúne os perfis e mantém as coletas sincronizadas entre as telas.
 function PainelAplicativo() {
-  const [token, setToken] = useState(() => localStorage.getItem('volta-token'));
+  const [token, setToken] = useState(() => safeStorage.getItem('volta-token'));
   const [usuario, setUsuario] = useState(null);
   const [perfil, setPerfil] = useState('moradora');
   const [coletas, setColetas] = useState([]);
@@ -304,10 +303,10 @@ function PainelAplicativo() {
   const [coletaAtiva, setColetaAtiva] = useState(null);
   const [coletaPesagem, setColetaPesagem] = useState(null);
   const [modoCelular, setModoCelular] = useState(() => {
-    const salvo = localStorage.getItem('volta-interface');
-    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    const salvo = safeStorage.getItem('volta-interface');
+    const mobile = getIsMobileViewport();
     if (mobile) {
-      localStorage.setItem('volta-interface', 'celular');
+      safeStorage.setItem('volta-interface', 'celular');
       return true;
     }
     return salvo === 'celular';
@@ -353,7 +352,7 @@ function PainelAplicativo() {
         setPerfil(dados.tipo === 'morador' ? 'moradora' : 'cooperativa');
       })
       .catch(() => {
-        localStorage.removeItem('volta-token');
+        safeStorage.removeItem('volta-token');
         setToken(null);
       });
   }, [token]);
@@ -430,17 +429,17 @@ function PainelAplicativo() {
   function alternarTela() {
     setModoCelular((atual) => {
       const proximo = !atual;
-      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      const mobile = getIsMobileViewport();
       if (mobile) {
-        localStorage.setItem('volta-interface', 'celular');
+        safeStorage.setItem('volta-interface', 'celular');
         return true;
       }
-      localStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
+      safeStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
       return proximo;
     });
   }
 
-  return <div className="aplicativo"><header className="barra-superior"><div className="barra-interior"><Marca /><div className="navegacao-centro"><span className="navegacao-ponto" />{perfil === 'moradora' ? 'Seu cantinho sustentável' : 'Operação de coleta'}</div><SeletorPerfil perfil={perfil} modoDemo={token === 'demo'} aoAlternarDemo={alternarPerfilDemo} aoSair={() => { localStorage.removeItem('volta-token'); window.location.reload(); }} /></div></header>
+  return <div className="aplicativo"><header className="barra-superior"><div className="barra-interior"><Marca /><div className="navegacao-centro"><span className="navegacao-ponto" />{perfil === 'moradora' ? 'Seu cantinho sustentável' : 'Operação de coleta'}</div><SeletorPerfil perfil={perfil} modoDemo={token === 'demo'} aoAlternarDemo={alternarPerfilDemo} aoSair={() => { safeStorage.removeItem('volta-token'); window.location.reload(); }} /></div></header>
     {erroApi && <div className="aviso-api" role="status"><span>!</span>{erroApi}<button onClick={() => setErroApi('')} aria-label="Fechar aviso">×</button></div>}
     {carregando ? <main className="estado-carregamento"><span className="carregando-spinner" />Carregando suas coletas...</main> : perfil === 'moradora' ? <TelaMoradora coletas={coletasOrdenadas} nomeMoradora={usuario?.nome} aoAgendar={() => setModalAgendamento(true)} aoSelecionar={setColetaAtiva} /> : <TelaCooperativa coletas={coletasOrdenadas} aoPesagem={setColetaPesagem} />}
     <footer className="rodape"><Marca /><span>Pequenas atitudes, um futuro que volta.</span><span className="rodape-direitos">Feito com cuidado <span>✳</span></span></footer>
@@ -452,7 +451,7 @@ function PainelAplicativo() {
 
 // Este componente decide se a pessoa vê a tela de login ou o painel do perfil autenticado.
 export default function Aplicativo() {
-  const [token, setToken] = useState(() => localStorage.getItem('volta-token'));
+  const [token, setToken] = useState(() => safeStorage.getItem('volta-token'));
   const [cadastro, setCadastro] = useState(false);
   if (!token) return cadastro ? <TelaCadastro aoVoltar={() => setCadastro(false)} /> : <TelaLogin aoEntrar={setToken} aoCadastrar={() => setCadastro(true)} />;
   return <PainelAplicativo key={token} />;
@@ -498,7 +497,7 @@ function TelaCadastro({ aoVoltar }) {
       const resposta = await fetch(`${API_BASE_URL}/usuarios`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha, tipo: 'morador' }) });
       const dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.detail || 'Não foi possível criar a conta.');
-      localStorage.removeItem('volta-token');
+      safeStorage.removeItem('volta-token');
       setMensagem('Conta criada com sucesso. Agora entre com seu e-mail e senha.');
       setTimeout(() => {
         aoVoltar();
@@ -512,4 +511,46 @@ function TelaCadastro({ aoVoltar }) {
   }
 
   return <main className="tela-login"><section className="cartao-login"><Marca /><span className="sobretitulo">NOVO CLIENTE</span><h1>Crie sua<br /><em>conta.</em></h1><p>Cadastre-se para agendar coletas e acompanhar seus pontos.</p><form onSubmit={cadastrar}><label className="campo-label" htmlFor="cadastro-nome">Nome</label><input className="campo-login" id="cadastro-nome" required minLength="2" value={nome} onChange={(evento) => setNome(evento.target.value)} placeholder="Seu nome" /><label className="campo-label" htmlFor="cadastro-email">E-mail</label><input className="campo-login" id="cadastro-email" type="email" required value={email} onChange={(evento) => setEmail(evento.target.value)} placeholder="voce@exemplo.com" /><label className="campo-label" htmlFor="cadastro-senha">Senha</label><input className="campo-login" id="cadastro-senha" type="password" minLength="8" required value={senha} onChange={(evento) => setSenha(evento.target.value)} placeholder="Mínimo de 8 caracteres" />{mensagem && <p className="mensagem-erro" role="status">{mensagem}</p>}<button className="botao-principal botao-login" disabled={enviando}>{enviando ? 'Criando...' : 'Criar conta'} <Icone nome="seta" tamanho={17} /></button></form><button type="button" className="botao-secundario botao-demo" onClick={aoVoltar}>Voltar para entrar</button></section></main>;
+}
+
+const safeStorage = {
+  getItem(chave) {
+    try {
+      return typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(chave) : null;
+    } catch {
+      return null;
+    }
+  },
+  setItem(chave, valor) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(chave, valor);
+      }
+    } catch {
+      // Ignora falhas do navegador ou de privacidade do storage.
+    }
+  },
+  removeItem(chave) {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(chave);
+      }
+    } catch {
+      // Ignora falhas do navegador ou de privacidade do storage.
+    }
+  },
+};
+
+function getIsMobileViewport() {
+  if (typeof window === 'undefined') return false;
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia('(max-width: 760px)').matches;
+  }
+  return Number(window.innerWidth || 0) <= 760;
+}
+
+function setInterfaceClass(modoCelular) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.classList.toggle('interface-celular', Boolean(modoCelular));
+  document.documentElement.classList.toggle('interface-computador', !modoCelular);
 }
