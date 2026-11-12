@@ -23529,7 +23529,10 @@ var import_client = __toESM(require_client(), 1);
 // src/Aplicativo.jsx
 var import_react = __toESM(require_react(), 1);
 var URL_API_CONFIGURADA = import.meta.env && import.meta.env.VITE_URL_DA_API;
-var API_PADRAO = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" ? "http://localhost:8000" : "https://sistema-de-coleta-vert.vercel.app";
+var nomeHost = window.location.hostname;
+var hostLocal = ["localhost", "127.0.0.1", "0.0.0.0"].includes(nomeHost);
+var hostRedeLocal = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|0\.0\.0\.0$)/.test(nomeHost);
+var API_PADRAO = hostLocal ? "http://localhost:8000" : hostRedeLocal ? `http://${nomeHost}:8000` : "https://sistema-de-coleta-vert.vercel.app";
 var API_BASE_URL = (URL_API_CONFIGURADA && URL_API_CONFIGURADA !== "/api" ? URL_API_CONFIGURADA : API_PADRAO).replace(/\/$/, "");
 var MATERIAIS = ["Papel", "Vidro", "Pl\xE1stico", "Metal"];
 var QUILOS_POR_PONTO = 2;
@@ -23537,7 +23540,7 @@ var calcularPontos = (quilos) => Math.floor(Number(quilos || 0) / QUILOS_POR_PON
 var COLETAS_INICIAIS = [
   {
     id: "VC-1042",
-    morador: "Joana Martins",
+    morador: "Cliente Exemplo",
     endereco: "Rua das Palmeiras, 128 \xB7 Vila Mariana",
     dia: dataRelativa(2),
     materiais: ["Papel", "Pl\xE1stico"],
@@ -23547,7 +23550,7 @@ var COLETAS_INICIAIS = [
   },
   {
     id: "VC-1041",
-    morador: "Joana Martins",
+    morador: "Cliente Exemplo",
     endereco: "Rua das Palmeiras, 128 \xB7 Vila Mariana",
     dia: dataRelativa(-3),
     materiais: ["Papel", "Metal"],
@@ -23610,10 +23613,23 @@ function Icone({ nome, tamanho = 18 }) {
   return /* @__PURE__ */ import_react.default.createElement("svg", { className: "icone", width: tamanho, height: tamanho, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.7", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, caminhos[nome] || caminhos.caixa);
 }
 function SeletorPerfil({ perfil, aoSair, modoDemo, aoAlternarDemo }) {
-  const [modoCelular, setModoCelular] = (0, import_react.useState)(() => localStorage.getItem("volta-interface") === "celular" || localStorage.getItem("volta-interface") === null && window.matchMedia("(max-width: 760px)").matches);
+  const [modoCelular, setModoCelular] = (0, import_react.useState)(() => {
+    const salvo = localStorage.getItem("volta-interface");
+    const mobile = window.matchMedia("(max-width: 760px)").matches;
+    if (mobile) {
+      localStorage.setItem("volta-interface", "celular");
+      return true;
+    }
+    return salvo === "celular";
+  });
   function alternarTela() {
     setModoCelular((atual) => {
       const proximo = !atual;
+      const mobile = window.matchMedia("(max-width: 760px)").matches;
+      if (mobile) {
+        localStorage.setItem("volta-interface", "celular");
+        return true;
+      }
       localStorage.setItem("volta-interface", proximo ? "celular" : "computador");
       document.documentElement.classList.toggle("interface-celular", proximo);
       document.documentElement.classList.toggle("interface-computador", !proximo);
@@ -23654,7 +23670,7 @@ function TelaLogin({ aoEntrar, aoCadastrar }) {
   }
   return /* @__PURE__ */ import_react.default.createElement("main", { className: "tela-login" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "cartao-login" }, /* @__PURE__ */ import_react.default.createElement(Marca, null), /* @__PURE__ */ import_react.default.createElement("span", { className: "sobretitulo" }, "ACESSO AO VOLTA"), /* @__PURE__ */ import_react.default.createElement("h1", null, "Seu cuidado", /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("em", null, "continua daqui.")), /* @__PURE__ */ import_react.default.createElement("p", null, "Entre para agendar coletas, acompanhar pontos e cuidar da rota."), /* @__PURE__ */ import_react.default.createElement("form", { onSubmit: entrar }, /* @__PURE__ */ import_react.default.createElement("label", { className: "campo-label", htmlFor: "login-email" }, "E-mail"), /* @__PURE__ */ import_react.default.createElement("input", { className: "campo-login", id: "login-email", type: "email", required: true, value: email, onChange: (evento) => setEmail(evento.target.value), placeholder: "voce@exemplo.com" }), /* @__PURE__ */ import_react.default.createElement("label", { className: "campo-label", htmlFor: "login-senha" }, "Senha"), /* @__PURE__ */ import_react.default.createElement("input", { className: "campo-login", id: "login-senha", type: "password", required: true, value: senha, onChange: (evento) => setSenha(evento.target.value), placeholder: "Sua senha" }), mensagem && /* @__PURE__ */ import_react.default.createElement("p", { className: "mensagem-erro", role: "alert" }, mensagem), /* @__PURE__ */ import_react.default.createElement("button", { className: "botao-principal botao-login", disabled: enviando }, enviando ? "Entrando..." : "Entrar", " ", /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "seta", tamanho: 17 }))), /* @__PURE__ */ import_react.default.createElement("div", { className: "divisor-login" }, /* @__PURE__ */ import_react.default.createElement("span", null, "ou")), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", className: "botao-secundario botao-demo", onClick: abrirDemonstracao }, "Ver demonstra\xE7\xE3o"), /* @__PURE__ */ import_react.default.createElement("p", { className: "legenda-demo" }, "A demonstra\xE7\xE3o usa dados fict\xEDcios e n\xE3o precisa do banco.")));
 }
-function FormularioAgendamento({ aoSalvar, aoCancelar }) {
+function FormularioAgendamento({ aoSalvar, aoCancelar, nomeMoradora = "Cliente" }) {
   const [endereco, setEndereco] = (0, import_react.useState)("");
   const [dia, setDia] = (0, import_react.useState)(dataRelativa(1));
   const [materiais, setMateriais] = (0, import_react.useState)([]);
@@ -23668,7 +23684,7 @@ function FormularioAgendamento({ aoSalvar, aoCancelar }) {
     }
     aoSalvar({
       id: `VC-${Math.floor(1e3 + Math.random() * 8999)}`,
-      morador: "Joana Martins",
+      morador: nomeMoradora || "Cliente",
       endereco: endereco.trim(),
       dia,
       materiais,
@@ -23694,10 +23710,11 @@ function CartaoColeta({ coleta, aoSelecionar, compacto = false }) {
 function DetalheColeta({ coleta, aoFechar }) {
   return /* @__PURE__ */ import_react.default.createElement("div", { className: "modal-fundo", role: "presentation", onMouseDown: (evento) => evento.target === evento.currentTarget && aoFechar() }, /* @__PURE__ */ import_react.default.createElement("section", { className: "modal modal-detalhe", role: "dialog", "aria-modal": "true", "aria-labelledby": "titulo-detalhe" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "modal-cabecalho" }, /* @__PURE__ */ import_react.default.createElement("span", { className: `mini-icone-coleta detalhe-icone ${coleta.situacao === "Coletada" ? "mini-concluida" : ""}` }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: coleta.situacao === "Coletada" ? "check" : "caixa", tamanho: 20 })), /* @__PURE__ */ import_react.default.createElement("button", { className: "fechar-modal", onClick: aoFechar, "aria-label": "Fechar" }, "\xD7")), /* @__PURE__ */ import_react.default.createElement("p", { className: "sobretitulo" }, "COLETA ", coleta.id), /* @__PURE__ */ import_react.default.createElement("h2", { id: "titulo-detalhe" }, formatarData(coleta.dia)), /* @__PURE__ */ import_react.default.createElement("p", { className: "texto-modal" }, coleta.endereco), coleta.descricao && /* @__PURE__ */ import_react.default.createElement("p", { className: "descricao-coleta" }, /* @__PURE__ */ import_react.default.createElement("strong", null, "Objetos do pedido:"), " ", coleta.descricao), /* @__PURE__ */ import_react.default.createElement("div", { className: "detalhe-status" }, /* @__PURE__ */ import_react.default.createElement("span", { className: `selo-status ${coleta.situacao === "Coletada" ? "status-concluida" : "status-agendada"}` }, /* @__PURE__ */ import_react.default.createElement("i", null), coleta.situacao), /* @__PURE__ */ import_react.default.createElement("span", null, coleta.materiais.join(" \xB7 "))), /* @__PURE__ */ import_react.default.createElement("div", { className: "secao-pesagem" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "secao-titulo" }, /* @__PURE__ */ import_react.default.createElement("h3", null, "O que foi pesado"), /* @__PURE__ */ import_react.default.createElement("span", null, coleta.pesagens.length, " ", coleta.pesagens.length === 1 ? "material" : "materiais")), coleta.pesagens.length ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, coleta.pesagens.map((pesagem, indice) => /* @__PURE__ */ import_react.default.createElement("div", { className: "linha-pesagem", key: `${pesagem.material}-${indice}` }, /* @__PURE__ */ import_react.default.createElement("span", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "bolinha-peso" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "peso", tamanho: 15 })), /* @__PURE__ */ import_react.default.createElement("strong", null, pesagem.material)), /* @__PURE__ */ import_react.default.createElement("span", null, pesagem.quilos, " kg ", /* @__PURE__ */ import_react.default.createElement("b", null, "\xB7"), " ", pesagem.pontos, " pts"))), /* @__PURE__ */ import_react.default.createElement("div", { className: "total-pontos" }, /* @__PURE__ */ import_react.default.createElement("span", null, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "estrela", tamanho: 18 }), " Total da entrega"), /* @__PURE__ */ import_react.default.createElement("strong", null, coleta.pontos, " ", /* @__PURE__ */ import_react.default.createElement("small", null, "pontos")))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "sem-pesagens" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "sem-peso-icone" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "relogio", tamanho: 19 })), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("strong", null, "Ainda n\xE3o foi pesada"), /* @__PURE__ */ import_react.default.createElement("p", null, "Os pontos aparecem aqui depois da coleta.")))), /* @__PURE__ */ import_react.default.createElement("button", { className: "botao-secundario botao-largo", onClick: aoFechar }, "Fechar")));
 }
-function TelaMoradora({ coletas, aoAgendar, aoSelecionar, nomeMoradora = "Joana Martins" }) {
+function TelaMoradora({ coletas, aoAgendar, aoSelecionar, nomeMoradora = "Cliente" }) {
   const minhas = coletas.filter((coleta) => coleta.morador === nomeMoradora).sort((a, b) => a.dia.localeCompare(b.dia));
+  const primeiroNome = (nomeMoradora || "Cliente").trim().split(/\s+/)[0];
   const pontos = minhas.reduce((soma, coleta) => soma + coleta.pontos, 0);
-  return /* @__PURE__ */ import_react.default.createElement("main", { className: "conteudo conteudo-moradora", id: "inicio" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "boas-vindas" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "saudacao" }, "OL\xC1, JOANA ", /* @__PURE__ */ import_react.default.createElement("span", { className: "emoji-ola" }, "\u2733")), /* @__PURE__ */ import_react.default.createElement("h1", null, "Um cuidado de cada vez.", /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("em", null, "O planeta agradece.")), /* @__PURE__ */ import_react.default.createElement("p", null, "Separe o que puder. A gente busca e transforma em novos come\xE7os."), /* @__PURE__ */ import_react.default.createElement("button", { className: "botao-principal botao-agendar", onClick: aoAgendar }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "mais", tamanho: 18 }), " Agendar coleta")), /* @__PURE__ */ import_react.default.createElement("div", { className: "ilustracao-boas-vindas", "aria-hidden": "true" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "sol-ilustrado" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "folha folha-um" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "folha folha-dois" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "vaso" }, /* @__PURE__ */ import_react.default.createElement("span", null, "\u219F")), /* @__PURE__ */ import_react.default.createElement("span", { className: "ponto-voando ponto-a" }, "\u2733"), /* @__PURE__ */ import_react.default.createElement("span", { className: "ponto-voando ponto-b" }, "\u2726"), /* @__PURE__ */ import_react.default.createElement("span", { className: "ponto-voando ponto-c" }, "\u2733"), /* @__PURE__ */ import_react.default.createElement("span", { className: "selo-ilustrado" }, "cada gesto", /* @__PURE__ */ import_react.default.createElement("br", null), "faz diferen\xE7a"))), /* @__PURE__ */ import_react.default.createElement("section", { className: "resumo-moradora" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "resumo-item" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "resumo-icone" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "calendario" })), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("small", null, "SUAS COLETAS"), /* @__PURE__ */ import_react.default.createElement("strong", null, minhas.length.toString().padStart(2, "0"), " ", /* @__PURE__ */ import_react.default.createElement("span", null, "agendadas e feitas")))), /* @__PURE__ */ import_react.default.createElement("span", { className: "resumo-divisor" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "resumo-item" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "resumo-icone resumo-estrela" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "estrela" })), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("small", null, "SEUS PONTOS"), /* @__PURE__ */ import_react.default.createElement("strong", null, pontos, " ", /* @__PURE__ */ import_react.default.createElement("span", null, "pontos acumulados")))), /* @__PURE__ */ import_react.default.createElement("div", { className: "mensagem-resumo" }, /* @__PURE__ */ import_react.default.createElement("span", null, "\u2733"), " Cada quilo conta. Obrigada por separar!")), /* @__PURE__ */ import_react.default.createElement("section", { className: "secao-coletas" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "cabecalho-secao" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "sobretitulo" }, "SEU HIST\xD3RICO"), /* @__PURE__ */ import_react.default.createElement("h2", null, "Suas coletas")), /* @__PURE__ */ import_react.default.createElement("button", { className: "link-acao", onClick: aoAgendar }, "Nova coleta ", /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "seta", tamanho: 16 }))), minhas.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "lista-coletas" }, minhas.map((coleta) => /* @__PURE__ */ import_react.default.createElement(CartaoColeta, { key: coleta.id, coleta, aoSelecionar }))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "estado-vazio" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "vazio-icone" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "caixa", tamanho: 23 })), /* @__PURE__ */ import_react.default.createElement("strong", null, "Sua primeira coleta come\xE7a aqui"), /* @__PURE__ */ import_react.default.createElement("p", null, "Quando voc\xEA agendar, vamos acompanhar tudo por aqui."), /* @__PURE__ */ import_react.default.createElement("button", { className: "botao-secundario", onClick: aoAgendar }, "Agendar minha coleta"))));
+  return /* @__PURE__ */ import_react.default.createElement("main", { className: "conteudo conteudo-moradora", id: "inicio" }, /* @__PURE__ */ import_react.default.createElement("section", { className: "boas-vindas" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "saudacao" }, "OL\xC1, ", primeiroNome.toUpperCASE(), " ", /* @__PURE__ */ import_react.default.createElement("span", { className: "emoji-ola" }, "\u2733")), /* @__PURE__ */ import_react.default.createElement("h1", null, "Um cuidado de cada vez.", /* @__PURE__ */ import_react.default.createElement("br", null), /* @__PURE__ */ import_react.default.createElement("em", null, "O planeta agradece.")), /* @__PURE__ */ import_react.default.createElement("p", null, "Separe o que puder. A gente busca e transforma em novos come\xE7os."), /* @__PURE__ */ import_react.default.createElement("button", { className: "botao-principal botao-agendar", onClick: aoAgendar }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "mais", tamanho: 18 }), " Agendar coleta")), /* @__PURE__ */ import_react.default.createElement("div", { className: "ilustracao-boas-vindas", "aria-hidden": "true" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "sol-ilustrado" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "folha folha-um" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "folha folha-dois" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "vaso" }, /* @__PURE__ */ import_react.default.createElement("span", null, "\u219F")), /* @__PURE__ */ import_react.default.createElement("span", { className: "ponto-voando ponto-a" }, "\u2733"), /* @__PURE__ */ import_react.default.createElement("span", { className: "ponto-voando ponto-b" }, "\u2726"), /* @__PURE__ */ import_react.default.createElement("span", { className: "ponto-voando ponto-c" }, "\u2733"), /* @__PURE__ */ import_react.default.createElement("span", { className: "selo-ilustrado" }, "cada gesto", /* @__PURE__ */ import_react.default.createElement("br", null), "faz diferen\xE7a"))), /* @__PURE__ */ import_react.default.createElement("section", { className: "resumo-moradora" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "resumo-item" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "resumo-icone" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "calendario" })), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("small", null, "SUAS COLETAS"), /* @__PURE__ */ import_react.default.createElement("strong", null, minhas.length.toString().padStart(2, "0"), " ", /* @__PURE__ */ import_react.default.createElement("span", null, "agendadas e feitas")))), /* @__PURE__ */ import_react.default.createElement("span", { className: "resumo-divisor" }), /* @__PURE__ */ import_react.default.createElement("div", { className: "resumo-item" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "resumo-icone resumo-estrela" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "estrela" })), /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("small", null, "SEUS PONTOS"), /* @__PURE__ */ import_react.default.createElement("strong", null, pontos, " ", /* @__PURE__ */ import_react.default.createElement("span", null, "pontos acumulados")))), /* @__PURE__ */ import_react.default.createElement("div", { className: "mensagem-resumo" }, /* @__PURE__ */ import_react.default.createElement("span", null, "\u2733"), " Cada quilo conta. Obrigada por separar!")), /* @__PURE__ */ import_react.default.createElement("section", { className: "secao-coletas" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "cabecalho-secao" }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("span", { className: "sobretitulo" }, "SEU HIST\xD3RICO"), /* @__PURE__ */ import_react.default.createElement("h2", null, "Suas coletas")), /* @__PURE__ */ import_react.default.createElement("button", { className: "link-acao", onClick: aoAgendar }, "Nova coleta ", /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "seta", tamanho: 16 }))), minhas.length ? /* @__PURE__ */ import_react.default.createElement("div", { className: "lista-coletas" }, minhas.map((coleta) => /* @__PURE__ */ import_react.default.createElement(CartaoColeta, { key: coleta.id, coleta, aoSelecionar }))) : /* @__PURE__ */ import_react.default.createElement("div", { className: "estado-vazio" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "vazio-icone" }, /* @__PURE__ */ import_react.default.createElement(Icone, { nome: "caixa", tamanho: 23 })), /* @__PURE__ */ import_react.default.createElement("strong", null, "Sua primeira coleta come\xE7a aqui"), /* @__PURE__ */ import_react.default.createElement("p", null, "Quando voc\xEA agendar, vamos acompanhar tudo por aqui."), /* @__PURE__ */ import_react.default.createElement("button", { className: "botao-secundario", onClick: aoAgendar }, "Agendar minha coleta"))));
 }
 function TelaCooperativa({ coletas, aoPesagem }) {
   const [dia, setDia] = (0, import_react.useState)(dataRelativa(2));
@@ -23728,7 +23745,15 @@ function PainelAplicativo() {
   const [modalAgendamento, setModalAgendamento] = (0, import_react.useState)(false);
   const [coletaAtiva, setColetaAtiva] = (0, import_react.useState)(null);
   const [coletaPesagem, setColetaPesagem] = (0, import_react.useState)(null);
-  const [modoCelular, setModoCelular] = (0, import_react.useState)(() => localStorage.getItem("volta-interface") === "celular" || localStorage.getItem("volta-interface") === null && window.matchMedia("(max-width: 760px)").matches);
+  const [modoCelular, setModoCelular] = (0, import_react.useState)(() => {
+    const salvo = localStorage.getItem("volta-interface");
+    const mobile = window.matchMedia("(max-width: 760px)").matches;
+    if (mobile) {
+      localStorage.setItem("volta-interface", "celular");
+      return true;
+    }
+    return salvo === "celular";
+  });
   const coletasOrdenadas = (0, import_react.useMemo)(() => coletas, [coletas]);
   (0, import_react.useEffect)(() => {
     if (!token) {
@@ -23736,7 +23761,7 @@ function PainelAplicativo() {
       return;
     }
     if (token === "demo") {
-      setUsuario({ nome: "Joana Martins", tipo: "morador" });
+      setUsuario({ nome: "Cliente Exemplo", tipo: "morador" });
       setPerfil("moradora");
       setColetas(COLETAS_INICIAIS);
       setCarregando(false);
@@ -23747,7 +23772,7 @@ function PainelAplicativo() {
       return resposta.json();
     }).then((dados) => setColetas(dados.map((coleta) => ({ ...coleta, pesagens: coleta.pesagens || [] })))).catch(() => {
       setErroApi("A API n\xE3o respondeu. Confira se o backend est\xE1 ligado.");
-      setColetas(COLETAS_INICIAIS);
+      setColetas([]);
     }).finally(() => setCarregando(false));
   }, [token]);
   (0, import_react.useEffect)(() => {
@@ -23820,11 +23845,16 @@ function PainelAplicativo() {
   }
   function alternarPerfilDemo() {
     setPerfil((atual) => atual === "moradora" ? "cooperativa" : "moradora");
-    setUsuario((atual) => atual?.tipo === "morador" ? { nome: "Osmar Coordenador", tipo: "cooperativa" } : { nome: "Joana Martins", tipo: "morador" });
+    setUsuario((atual) => atual?.tipo === "morador" ? { nome: "Osmar Coordenador", tipo: "cooperativa" } : { nome: "Cliente Exemplo", tipo: "morador" });
   }
   function alternarTela() {
     setModoCelular((atual) => {
       const proximo = !atual;
+      const mobile = window.matchMedia("(max-width: 760px)").matches;
+      if (mobile) {
+        localStorage.setItem("volta-interface", "celular");
+        return true;
+      }
       localStorage.setItem("volta-interface", proximo ? "celular" : "computador");
       return proximo;
     });
@@ -23832,7 +23862,7 @@ function PainelAplicativo() {
   return /* @__PURE__ */ import_react.default.createElement("div", { className: "aplicativo" }, /* @__PURE__ */ import_react.default.createElement("header", { className: "barra-superior" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "barra-interior" }, /* @__PURE__ */ import_react.default.createElement(Marca, null), /* @__PURE__ */ import_react.default.createElement("div", { className: "navegacao-centro" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "navegacao-ponto" }), perfil === "moradora" ? "Seu cantinho sustent\xE1vel" : "Opera\xE7\xE3o de coleta"), /* @__PURE__ */ import_react.default.createElement(SeletorPerfil, { perfil, modoDemo: token === "demo", aoAlternarDemo: alternarPerfilDemo, aoSair: () => {
     localStorage.removeItem("volta-token");
     window.location.reload();
-  } }))), erroApi && /* @__PURE__ */ import_react.default.createElement("div", { className: "aviso-api", role: "status" }, /* @__PURE__ */ import_react.default.createElement("span", null, "!"), erroApi, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setErroApi(""), "aria-label": "Fechar aviso" }, "\xD7")), carregando ? /* @__PURE__ */ import_react.default.createElement("main", { className: "estado-carregamento" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "carregando-spinner" }), "Carregando suas coletas...") : perfil === "moradora" ? /* @__PURE__ */ import_react.default.createElement(TelaMoradora, { coletas: coletasOrdenadas, nomeMoradora: usuario?.nome, aoAgendar: () => setModalAgendamento(true), aoSelecionar: setColetaAtiva }) : /* @__PURE__ */ import_react.default.createElement(TelaCooperativa, { coletas: coletasOrdenadas, aoPesagem: setColetaPesagem }), /* @__PURE__ */ import_react.default.createElement("footer", { className: "rodape" }, /* @__PURE__ */ import_react.default.createElement(Marca, null), /* @__PURE__ */ import_react.default.createElement("span", null, "Pequenas atitudes, um futuro que volta."), /* @__PURE__ */ import_react.default.createElement("span", { className: "rodape-direitos" }, "Feito com cuidado ", /* @__PURE__ */ import_react.default.createElement("span", null, "\u2733"))), modalAgendamento && /* @__PURE__ */ import_react.default.createElement(FormularioAgendamento, { aoSalvar: salvarAgendamento, aoCancelar: () => setModalAgendamento(false) }), coletaAtiva && /* @__PURE__ */ import_react.default.createElement(DetalheColeta, { coleta: coletaAtiva, aoFechar: () => setColetaAtiva(null) }), coletaPesagem && /* @__PURE__ */ import_react.default.createElement(FormularioPesagemMateriais, { coleta: coletaPesagem, aoSalvar: salvarPesagem, aoCancelar: () => setColetaPesagem(null) }));
+  } }))), erroApi && /* @__PURE__ */ import_react.default.createElement("div", { className: "aviso-api", role: "status" }, /* @__PURE__ */ import_react.default.createElement("span", null, "!"), erroApi, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setErroApi(""), "aria-label": "Fechar aviso" }, "\xD7")), carregando ? /* @__PURE__ */ import_react.default.createElement("main", { className: "estado-carregamento" }, /* @__PURE__ */ import_react.default.createElement("span", { className: "carregando-spinner" }), "Carregando suas coletas...") : perfil === "moradora" ? /* @__PURE__ */ import_react.default.createElement(TelaMoradora, { coletas: coletasOrdenadas, nomeMoradora: usuario?.nome, aoAgendar: () => setModalAgendamento(true), aoSelecionar: setColetaAtiva }) : /* @__PURE__ */ import_react.default.createElement(TelaCooperativa, { coletas: coletasOrdenadas, aoPesagem: setColetaPesagem }), /* @__PURE__ */ import_react.default.createElement("footer", { className: "rodape" }, /* @__PURE__ */ import_react.default.createElement(Marca, null), /* @__PURE__ */ import_react.default.createElement("span", null, "Pequenas atitudes, um futuro que volta."), /* @__PURE__ */ import_react.default.createElement("span", { className: "rodape-direitos" }, "Feito com cuidado ", /* @__PURE__ */ import_react.default.createElement("span", null, "\u2733"))), modalAgendamento && /* @__PURE__ */ import_react.default.createElement(FormularioAgendamento, { nomeMoradora: usuario?.nome || "Cliente", aoSalvar: salvarAgendamento, aoCancelar: () => setModalAgendamento(false) }), coletaAtiva && /* @__PURE__ */ import_react.default.createElement(DetalheColeta, { coleta: coletaAtiva, aoFechar: () => setColetaAtiva(null) }), coletaPesagem && /* @__PURE__ */ import_react.default.createElement(FormularioPesagemMateriais, { coleta: coletaPesagem, aoSalvar: salvarPesagem, aoCancelar: () => setColetaPesagem(null) }));
 }
 function Aplicativo() {
   const [token, setToken] = (0, import_react.useState)(() => localStorage.getItem("volta-token"));
@@ -23872,8 +23902,12 @@ function TelaCadastro({ aoVoltar }) {
       const resposta = await fetch(`${API_BASE_URL}/usuarios`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nome, email, senha, tipo: "morador" }) });
       const dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.detail || "N\xE3o foi poss\xEDvel criar a conta.");
+      localStorage.removeItem("volta-token");
       setMensagem("Conta criada com sucesso. Agora entre com seu e-mail e senha.");
-      setTimeout(aoVoltar, 1200);
+      setTimeout(() => {
+        aoVoltar();
+        setTimeout(() => window.location.reload(), 100);
+      }, 1200);
     } catch (erro) {
       setMensagem(erro.message);
     } finally {

@@ -5,8 +5,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 // import.meta.env não é injetado pelo Vite e precisa ser lido com segurança.
 const URL_API_CONFIGURADA = import.meta.env && import.meta.env.VITE_URL_DA_API;
 const nomeHost = window.location.hostname;
-const hostLocal = nomeHost === 'localhost' || nomeHost === '127.0.0.1';
-const hostRedeLocal = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(nomeHost);
+const hostLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(nomeHost);
+const hostRedeLocal = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|0\.0\.0\.0$)/.test(nomeHost);
 const API_PADRAO = hostLocal
   ? 'http://localhost:8000'
   : hostRedeLocal
@@ -237,7 +237,7 @@ function TelaMoradora({ coletas, aoAgendar, aoSelecionar, nomeMoradora = 'Client
   const primeiroNome = (nomeMoradora || 'Cliente').trim().split(/\s+/)[0];
   const pontos = minhas.reduce((soma, coleta) => soma + coleta.pontos, 0);
   return <main className="conteudo conteudo-moradora" id="inicio">
-    <section className="boas-vindas"><div><span className="saudacao">OLÁ, {primeiroNome.toUpperCase()} <span className="emoji-ola">✳</span></span><h1>Um cuidado de cada vez.<br /><em>O planeta agradece.</em></h1><p>Separe o que puder. A gente busca e transforma em novos começos.</p><button className="botao-principal botao-agendar" onClick={aoAgendar}><Icone nome="mais" tamanho={18} /> Agendar coleta</button></div><div className="ilustracao-boas-vindas" aria-hidden="true"><div className="sol-ilustrado" /><div className="folha folha-um" /><div className="folha folha-dois" /><div className="vaso"><span>↟</span></div><span className="ponto-voando ponto-a">✳</span><span className="ponto-voando ponto-b">✦</span><span className="ponto-voando ponto-c">✳</span><span className="selo-ilustrado">cada gesto<br />faz diferença</span></div></section>
+    <section className="boas-vindas"><div><span className="saudacao">OLÁ, {primeiroNome.toUpperCASE()} <span className="emoji-ola">✳</span></span><h1>Um cuidado de cada vez.<br /><em>O planeta agradece.</em></h1><p>Separe o que puder. A gente busca e transforma em novos começos.</p><button className="botao-principal botao-agendar" onClick={aoAgendar}><Icone nome="mais" tamanho={18} /> Agendar coleta</button></div><div className="ilustracao-boas-vindas" aria-hidden="true"><div className="sol-ilustrado" /><div className="folha folha-um" /><div className="folha folha-dois" /><div className="vaso"><span>↟</span></div><span className="ponto-voando ponto-a">✳</span><span className="ponto-voando ponto-b">✦</span><span className="ponto-voando ponto-c">✳</span><span className="selo-ilustrado">cada gesto<br />faz diferença</span></div></section>
     <section className="resumo-moradora"><div className="resumo-item"><span className="resumo-icone"><Icone nome="calendario" /></span><div><small>SUAS COLETAS</small><strong>{minhas.length.toString().padStart(2, '0')} <span>agendadas e feitas</span></strong></div></div><span className="resumo-divisor" /><div className="resumo-item"><span className="resumo-icone resumo-estrela"><Icone nome="estrela" /></span><div><small>SEUS PONTOS</small><strong>{pontos} <span>pontos acumulados</span></strong></div></div><div className="mensagem-resumo"><span>✳</span> Cada quilo conta. Obrigada por separar!</div></section>
     <section className="secao-coletas"><div className="cabecalho-secao"><div><span className="sobretitulo">SEU HISTÓRICO</span><h2>Suas coletas</h2></div><button className="link-acao" onClick={aoAgendar}>Nova coleta <Icone nome="seta" tamanho={16} /></button></div>
       {minhas.length ? <div className="lista-coletas">{minhas.map((coleta) => <CartaoColeta key={coleta.id} coleta={coleta} aoSelecionar={aoSelecionar} />)}</div> : <div className="estado-vazio"><span className="vazio-icone"><Icone nome="caixa" tamanho={23} /></span><strong>Sua primeira coleta começa aqui</strong><p>Quando você agendar, vamos acompanhar tudo por aqui.</p><button className="botao-secundario" onClick={aoAgendar}>Agendar minha coleta</button></div>}</section>
@@ -498,8 +498,12 @@ function TelaCadastro({ aoVoltar }) {
       const resposta = await fetch(`${API_BASE_URL}/usuarios`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome, email, senha, tipo: 'morador' }) });
       const dados = await resposta.json();
       if (!resposta.ok) throw new Error(dados.detail || 'Não foi possível criar a conta.');
+      localStorage.removeItem('volta-token');
       setMensagem('Conta criada com sucesso. Agora entre com seu e-mail e senha.');
-      setTimeout(aoVoltar, 1200);
+      setTimeout(() => {
+        aoVoltar();
+        setTimeout(() => window.location.reload(), 100);
+      }, 1200);
     } catch (erro) {
       setMensagem(erro.message);
     } finally {

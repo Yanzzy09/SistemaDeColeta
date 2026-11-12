@@ -15,10 +15,10 @@ app = FastAPI(title="Volta — API de Coletas", version="1.0.0")
 # O CORS libera somente a origem configurada para o frontend deste ambiente.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.ORIGENS_FRONTEND,
+    allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 
