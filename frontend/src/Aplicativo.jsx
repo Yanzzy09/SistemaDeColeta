@@ -4,9 +4,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 // O bundle também pode ser servido como arquivo estático; nesse caso
 // import.meta.env não é injetado pelo Vite e precisa ser lido com segurança.
 const URL_API_CONFIGURADA = import.meta.env && import.meta.env.VITE_URL_DA_API;
-const API_PADRAO = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const nomeHost = window.location.hostname;
+const hostLocal = nomeHost === 'localhost' || nomeHost === '127.0.0.1';
+const hostRedeLocal = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(nomeHost);
+const API_PADRAO = hostLocal
   ? 'http://localhost:8000'
-  : 'https://sistema-de-coleta-vert.vercel.app';
+  : hostRedeLocal
+    ? `http://${nomeHost}:8000`
+    : 'https://sistema-de-coleta-vert.vercel.app';
 const API_BASE_URL = (URL_API_CONFIGURADA && URL_API_CONFIGURADA !== '/api'
   ? URL_API_CONFIGURADA
   : API_PADRAO).replace(/\/$/, '');
@@ -20,11 +25,11 @@ const calcularPontos = (quilos) => Math.floor(Number(quilos || 0) / QUILOS_POR_P
 
 const COLETAS_INICIAIS = [
   {
-    id: 'VC-1042', morador: 'Joana Martins', endereco: 'Rua das Palmeiras, 128 · Vila Mariana',
+    id: 'VC-1042', morador: 'Cliente Exemplo', endereco: 'Rua das Palmeiras, 128 · Vila Mariana',
     dia: dataRelativa(2), materiais: ['Papel', 'Plástico'], situacao: 'Agendada', pontos: 0, pesagens: [],
   },
   {
-    id: 'VC-1041', morador: 'Joana Martins', endereco: 'Rua das Palmeiras, 128 · Vila Mariana',
+    id: 'VC-1041', morador: 'Cliente Exemplo', endereco: 'Rua das Palmeiras, 128 · Vila Mariana',
     dia: dataRelativa(-3), materiais: ['Papel', 'Metal'], situacao: 'Coletada', pontos: 7,
     pesagens: [{ material: 'Papel', quilos: 10 }, { material: 'Metal', quilos: 4 }],
   },
@@ -86,10 +91,23 @@ function Icone({ nome, tamanho = 18 }) {
 
 // Este componente mantém a navegação entre os dois perfis simples e visível.
 function SeletorPerfil({ perfil, aoSair, modoDemo, aoAlternarDemo }) {
-  const [modoCelular, setModoCelular] = useState(() => localStorage.getItem('volta-interface') === 'celular' || (localStorage.getItem('volta-interface') === null && window.matchMedia('(max-width: 760px)').matches));
+  const [modoCelular, setModoCelular] = useState(() => {
+    const salvo = localStorage.getItem('volta-interface');
+    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    if (mobile) {
+      localStorage.setItem('volta-interface', 'celular');
+      return true;
+    }
+    return salvo === 'celular';
+  });
   function alternarTela() {
     setModoCelular((atual) => {
       const proximo = !atual;
+      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      if (mobile) {
+        localStorage.setItem('volta-interface', 'celular');
+        return true;
+      }
       localStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
       document.documentElement.classList.toggle('interface-celular', proximo);
       document.documentElement.classList.toggle('interface-computador', !proximo);
@@ -142,7 +160,7 @@ function TelaLogin({ aoEntrar, aoCadastrar }) {
 }
 
 // Este formulário reúne os dados necessários para marcar uma coleta em poucos passos.
-function FormularioAgendamento({ aoSalvar, aoCancelar }) {
+function FormularioAgendamento({ aoSalvar, aoCancelar, nomeMoradora = 'Cliente' }) {
   const [endereco, setEndereco] = useState('');
   const [dia, setDia] = useState(dataRelativa(1));
   const [materiais, setMateriais] = useState([]);
@@ -158,7 +176,7 @@ function FormularioAgendamento({ aoSalvar, aoCancelar }) {
     }
     aoSalvar({
       id: `VC-${Math.floor(1000 + Math.random() * 8999)}`,
-      morador: 'Joana Martins', endereco: endereco.trim(), dia, materiais, descricao: descricao.trim(),
+      morador: nomeMoradora || 'Cliente', endereco: endereco.trim(), dia, materiais, descricao: descricao.trim(),
       situacao: 'Agendada', pontos: 0, pesagens: [],
     });
   }
@@ -214,11 +232,12 @@ function DetalheColeta({ coleta, aoFechar }) {
 }
 
 // Esta tela permite à moradora agendar uma busca e acompanhar seus resultados.
-function TelaMoradora({ coletas, aoAgendar, aoSelecionar, nomeMoradora = 'Joana Martins' }) {
+function TelaMoradora({ coletas, aoAgendar, aoSelecionar, nomeMoradora = 'Cliente' }) {
   const minhas = coletas.filter((coleta) => coleta.morador === nomeMoradora).sort((a, b) => a.dia.localeCompare(b.dia));
+  const primeiroNome = (nomeMoradora || 'Cliente').trim().split(/\s+/)[0];
   const pontos = minhas.reduce((soma, coleta) => soma + coleta.pontos, 0);
   return <main className="conteudo conteudo-moradora" id="inicio">
-    <section className="boas-vindas"><div><span className="saudacao">OLÁ, JOANA <span className="emoji-ola">✳</span></span><h1>Um cuidado de cada vez.<br /><em>O planeta agradece.</em></h1><p>Separe o que puder. A gente busca e transforma em novos começos.</p><button className="botao-principal botao-agendar" onClick={aoAgendar}><Icone nome="mais" tamanho={18} /> Agendar coleta</button></div><div className="ilustracao-boas-vindas" aria-hidden="true"><div className="sol-ilustrado" /><div className="folha folha-um" /><div className="folha folha-dois" /><div className="vaso"><span>↟</span></div><span className="ponto-voando ponto-a">✳</span><span className="ponto-voando ponto-b">✦</span><span className="ponto-voando ponto-c">✳</span><span className="selo-ilustrado">cada gesto<br />faz diferença</span></div></section>
+    <section className="boas-vindas"><div><span className="saudacao">OLÁ, {primeiroNome.toUpperCase()} <span className="emoji-ola">✳</span></span><h1>Um cuidado de cada vez.<br /><em>O planeta agradece.</em></h1><p>Separe o que puder. A gente busca e transforma em novos começos.</p><button className="botao-principal botao-agendar" onClick={aoAgendar}><Icone nome="mais" tamanho={18} /> Agendar coleta</button></div><div className="ilustracao-boas-vindas" aria-hidden="true"><div className="sol-ilustrado" /><div className="folha folha-um" /><div className="folha folha-dois" /><div className="vaso"><span>↟</span></div><span className="ponto-voando ponto-a">✳</span><span className="ponto-voando ponto-b">✦</span><span className="ponto-voando ponto-c">✳</span><span className="selo-ilustrado">cada gesto<br />faz diferença</span></div></section>
     <section className="resumo-moradora"><div className="resumo-item"><span className="resumo-icone"><Icone nome="calendario" /></span><div><small>SUAS COLETAS</small><strong>{minhas.length.toString().padStart(2, '0')} <span>agendadas e feitas</span></strong></div></div><span className="resumo-divisor" /><div className="resumo-item"><span className="resumo-icone resumo-estrela"><Icone nome="estrela" /></span><div><small>SEUS PONTOS</small><strong>{pontos} <span>pontos acumulados</span></strong></div></div><div className="mensagem-resumo"><span>✳</span> Cada quilo conta. Obrigada por separar!</div></section>
     <section className="secao-coletas"><div className="cabecalho-secao"><div><span className="sobretitulo">SEU HISTÓRICO</span><h2>Suas coletas</h2></div><button className="link-acao" onClick={aoAgendar}>Nova coleta <Icone nome="seta" tamanho={16} /></button></div>
       {minhas.length ? <div className="lista-coletas">{minhas.map((coleta) => <CartaoColeta key={coleta.id} coleta={coleta} aoSelecionar={aoSelecionar} />)}</div> : <div className="estado-vazio"><span className="vazio-icone"><Icone nome="caixa" tamanho={23} /></span><strong>Sua primeira coleta começa aqui</strong><p>Quando você agendar, vamos acompanhar tudo por aqui.</p><button className="botao-secundario" onClick={aoAgendar}>Agendar minha coleta</button></div>}</section>
@@ -284,7 +303,15 @@ function PainelAplicativo() {
   const [modalAgendamento, setModalAgendamento] = useState(false);
   const [coletaAtiva, setColetaAtiva] = useState(null);
   const [coletaPesagem, setColetaPesagem] = useState(null);
-  const [modoCelular, setModoCelular] = useState(() => localStorage.getItem('volta-interface') === 'celular' || (localStorage.getItem('volta-interface') === null && window.matchMedia('(max-width: 760px)').matches));
+  const [modoCelular, setModoCelular] = useState(() => {
+    const salvo = localStorage.getItem('volta-interface');
+    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    if (mobile) {
+      localStorage.setItem('volta-interface', 'celular');
+      return true;
+    }
+    return salvo === 'celular';
+  });
   const coletasOrdenadas = useMemo(() => coletas, [coletas]);
 
   // Este efeito carrega a mesma lista usada pelo backend para sincronizar os dois perfis.
@@ -294,7 +321,7 @@ function PainelAplicativo() {
       return;
     }
     if (token === 'demo') {
-      setUsuario({ nome: 'Joana Martins', tipo: 'morador' });
+      setUsuario({ nome: 'Cliente Exemplo', tipo: 'morador' });
       setPerfil('moradora');
       setColetas(COLETAS_INICIAIS);
       setCarregando(false);
@@ -308,7 +335,7 @@ function PainelAplicativo() {
       .then((dados) => setColetas(dados.map((coleta) => ({ ...coleta, pesagens: coleta.pesagens || [] })) ))
       .catch(() => {
         setErroApi('A API não respondeu. Confira se o backend está ligado.');
-        setColetas(COLETAS_INICIAIS);
+        setColetas([]);
       })
       .finally(() => setCarregando(false));
   }, [token]);
@@ -396,13 +423,18 @@ function PainelAplicativo() {
 
   function alternarPerfilDemo() {
     setPerfil((atual) => atual === 'moradora' ? 'cooperativa' : 'moradora');
-    setUsuario((atual) => atual?.tipo === 'morador' ? { nome: 'Osmar Coordenador', tipo: 'cooperativa' } : { nome: 'Joana Martins', tipo: 'morador' });
+    setUsuario((atual) => atual?.tipo === 'morador' ? { nome: 'Osmar Coordenador', tipo: 'cooperativa' } : { nome: 'Cliente Exemplo', tipo: 'morador' });
   }
 
   // Esta função alterna a densidade da interface e preserva a escolha neste navegador.
   function alternarTela() {
     setModoCelular((atual) => {
       const proximo = !atual;
+      const mobile = window.matchMedia('(max-width: 760px)').matches;
+      if (mobile) {
+        localStorage.setItem('volta-interface', 'celular');
+        return true;
+      }
       localStorage.setItem('volta-interface', proximo ? 'celular' : 'computador');
       return proximo;
     });
@@ -412,7 +444,7 @@ function PainelAplicativo() {
     {erroApi && <div className="aviso-api" role="status"><span>!</span>{erroApi}<button onClick={() => setErroApi('')} aria-label="Fechar aviso">×</button></div>}
     {carregando ? <main className="estado-carregamento"><span className="carregando-spinner" />Carregando suas coletas...</main> : perfil === 'moradora' ? <TelaMoradora coletas={coletasOrdenadas} nomeMoradora={usuario?.nome} aoAgendar={() => setModalAgendamento(true)} aoSelecionar={setColetaAtiva} /> : <TelaCooperativa coletas={coletasOrdenadas} aoPesagem={setColetaPesagem} />}
     <footer className="rodape"><Marca /><span>Pequenas atitudes, um futuro que volta.</span><span className="rodape-direitos">Feito com cuidado <span>✳</span></span></footer>
-    {modalAgendamento && <FormularioAgendamento aoSalvar={salvarAgendamento} aoCancelar={() => setModalAgendamento(false)} />}
+    {modalAgendamento && <FormularioAgendamento nomeMoradora={usuario?.nome || 'Cliente'} aoSalvar={salvarAgendamento} aoCancelar={() => setModalAgendamento(false)} />}
     {coletaAtiva && <DetalheColeta coleta={coletaAtiva} aoFechar={() => setColetaAtiva(null)} />}
     {coletaPesagem && <FormularioPesagemMateriais coleta={coletaPesagem} aoSalvar={salvarPesagem} aoCancelar={() => setColetaPesagem(null)} />}
   </div>;
