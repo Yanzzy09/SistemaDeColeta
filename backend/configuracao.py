@@ -13,6 +13,8 @@ ORIGENS_FRONTEND = [origem for origem in {
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://sistema-de-coleta-v1vz.vercel.app",
+    "https://sistema-de-coleta-gzm1.vercel.app",
+    "https://sistema-de-coleta-gzm1.vercel.app/",
 } if origem]
 
 # Este endereço informa ao SQLAlchemy como encontrar o banco PostgreSQL deste ambiente.
